@@ -1,158 +1,154 @@
 //
-// Created by Glucose_carbide on 25-7-23.
+// Created by Glucose_carbide on 2026-4-15.
 //
 
-// =============================== 引入头文件 ===============================
-#include "buzzer.hpp"
-#include "config.hpp"
-#include "stm32h7xx_hal.h"
-#include "tim.h"
-#include "buzzer_soundtrack.hpp"
+#include "buzzer.h"
+
+#include <iterator>
+#include "music_soundtrack.h"
+#include "tim.hpp"
 #include "usartio.hpp"
 
-// =============================== 宏定义区 ===============================
-static constexpr float UPDATE_FREQUENCY = 1000.0f / TASK_BUZZER_TASK_PERIOD;
-
-// =============================== 变量区 ===============================
-
-// =============================== 函数实现 ===============================
-[[nodiscard]] static inline int BPM2Period(const uint16_t bpm)
+namespace Buzzer
 {
-    return static_cast<int>(60.0f * UPDATE_FREQUENCY / bpm);
-}
-
-void cTim::Init() const
-{
-    HAL_TIM_Base_Start(htim);
-    HAL_TIM_PWM_Start(htim, tim_channel);
-}
-
-void cTim::Mute() const
-{
-  __HAL_TIM_SetCompare(htim, tim_channel, 0);
-}
-
-void cTim::ChangeFreqDuty(const uint16_t freq, const uint8_t duty) const
-{
-    if (freq != 0)
+    namespace
     {
-        uint16_t arr = 1000000 / freq;
-        if (arr >= 65535)
-            arr = 65535;
-        // __HAL_TIM_SetAutoreload(htim, arr);
-        htim->Instance->ARR = arr;
-        ChangeDuty(duty);
+        struct BlockNote
+        {
+            uint16_t pitch = 0;
+            int32_t duration_ms = 0;
+        };
+
+        constexpr uint8_t MAX_TRACK_COUNT = 10;
+        constexpr uint8_t MAX_BLOCK_NOTE_COUNT = 20;
+
+        bool default_mute_trigger = true;
+
+        constexpr Config default_config = {
+            .soundtrack = Soundtracks::soundtrack_mute,
+            .track_len = std::size(Soundtracks::soundtrack_mute),
+            .priority = 0,
+            .trigger = &default_mute_trigger,
+            .active_trigger_state = true,
+            .restart_when_interrupted = false
+        };
+
+        cTim tim(&htim12,TIM_CHANNEL_2);
+        BlockNote block_notes[MAX_BLOCK_NOTE_COUNT];
+        uint8_t block_play_idx = 0;
+        uint8_t block_write_idx = 0;
+        MusicEvent tracks[MAX_TRACK_COUNT] = {};
+        uint8_t track_count = 1;
+
+        void Mute()
+        {
+            tim.ChangeDuty(0);
+        }
+
+        void SetTone(const uint16_t freq, const uint8_t duty = 50)
+        {
+            if (freq != 0)
+            {
+                tim.ChangeFreqDuty(freq, duty);
+            }
+            else
+                Mute();
+        }
+
+        void UpdateOutput(const uint8_t period)
+        {
+            uint16_t pitch_now;
+            uint8_t duty_now;
+
+            if (block_play_idx != block_write_idx ||
+                (block_play_idx == block_write_idx && block_notes[block_play_idx].duration_ms > 0))
+            {
+                pitch_now = block_notes[block_play_idx].pitch;
+                duty_now = 50;
+
+                block_notes[block_play_idx].duration_ms -= period;
+
+                if (block_notes[block_play_idx].duration_ms <= 0)
+                {
+                    block_notes[block_play_idx].pitch = 0;
+                    block_play_idx++; block_play_idx %= MAX_BLOCK_NOTE_COUNT;
+                }
+                // usart_printf("%d,%d,%d,%d\n",block_play_idx,block_write_idx,block_notes[block_play_idx].pitch,block_notes[block_play_idx].duration_ms);
+            }
+            else
+            {
+                uint8_t best_track = 0;
+                uint8_t best_prio = 0;
+                for (uint8_t i = 0; i < track_count; i++)
+                {
+                    if (tracks[i].isTriggered() && tracks[i].getPriority() > best_prio)
+                    {
+                        best_prio = tracks[i].getPriority();
+                        best_track = i;
+                    }
+                }
+
+                // logger_printf("%d,%d,%d,%d\n",best_track,tracks[1].isTriggered(),tracks[2].isTriggered(),tracks[3].isTriggered());
+
+                for (uint8_t i = 0; i < track_count; i++)
+                {
+                    if (i != best_track)
+                        tracks[i].reload();
+                    else
+                        tracks[i].update(period);
+                }
+
+                pitch_now = tracks[best_track].getPitch();
+                duty_now = tracks[best_track].getDuty();
+            }
+            SetTone(pitch_now, duty_now);
+        }
     }
-    else
+
+    void Init()
+    {
+        tim.Init();
+        SetTone(2000); // 在buzzer::loop开始前会一直响 // 妙(板)一直响!
+        AddToNoteTrack(Pitch::do_5, 25);
+        tracks[0] = MusicEvent(default_config);
+    }
+
+    void SingBlock(const uint16_t pitch, const uint16_t duration_ms)
+    {
+        SetTone(pitch);
+        HAL_Delay(duration_ms);
         Mute();
-}
-
-void cTim::ChangeDuty(const uint8_t duty) const
-{
-    const uint16_t arr = htim->Instance->ARR;
-    const uint16_t ccr = arr * duty / 100;
-  __HAL_TIM_SetCompare(htim, tim_channel, ccr);
-}
-
-/// 根据当前状态选择音轨
-void cBuzzer::SelectSoundtrack()
-{
-    soundtrack_last = soundtrack_now;
-    switch (state)
-    {
-    default:
-        soundtrack_now = eSoundtrack::MUTE;
-        soundtrack = soundtrack_immortal_ash;
-        track_length = sizeof(soundtrack_immortal_ash) / sizeof(soundtrack_immortal_ash[0]);
-        break;
-    }
-}
-
-void cBuzzer::UpdateSoundtrack()
-{
-    if (soundtrack_now != soundtrack_last)
-    {
-        soundtrack_last = soundtrack_now;
-        note_index = 0;
-        frame_counter = 0;
-        frame_per_beat = 200;
     }
 
-    while (soundtrack[note_index].GetPeriod() == 0)
+    bool AddToNoteTrack(const uint16_t pitch, const uint16_t duration_ms)
     {
-        frame_per_beat = BPM2Period(soundtrack[note_index].GetPitch());
-        if (++note_index >= track_length)
-            note_index = 0;
+        // block音轨满则不再添加
+        if ((block_write_idx + 1) % MAX_BLOCK_NOTE_COUNT == block_play_idx)
+            return false;
+
+        block_write_idx++; block_write_idx %= MAX_BLOCK_NOTE_COUNT;
+        block_notes[block_write_idx].pitch = pitch;
+        block_notes[block_write_idx].duration_ms = static_cast<int16_t>(duration_ms);
+        return true;
     }
 
-    // usart_printf("%d\n",frame_per_beat);
-    const uint16_t pitch = soundtrack[note_index].GetPitch();
-    const uint8_t period = soundtrack[note_index].GetPeriod();
-    const uint8_t on_ratio = soundtrack[note_index].GetOnRatio();
-    const uint8_t duty = soundtrack[note_index].GetDuty() * 100 / 0x0F;
-
-    duration_frames = static_cast<uint32_t>(period) * frame_per_beat;
-    on_frames = (duration_frames * on_ratio) / 0x0F;
-
-    if (duration_frames == 0)
-        duration_frames = 1;
-
-    if (frame_counter < on_frames)
-        ChangeFreqDuty(pitch, duty);
-    else
-        Mute();
-
-    if (++frame_counter >= duration_frames)
+    bool AddConfig(const Config& config)
     {
-        frame_counter = 0;
-        if (++note_index >= track_length)
-            note_index = 0;
+        if (track_count >= MAX_TRACK_COUNT)
+            return false;
+
+        tracks[track_count] = MusicEvent(config);
+        track_count++;
+        return true;
     }
-}
 
-void cBuzzer::ControlLoop()
-{
-    SelectSoundtrack();
-    UpdateSoundtrack();
-}
+    __weak void UpdateTriggers()
+    {
+    }
 
-
-// /// 根据当前音轨进行帧操作
-// void cBuzzer::UpdateSoundtrack()
-// {
-//     if (soundtrack_now != soundtrack_last)
-//     { // 若音轨变了，就重置参数
-//         duration_frames = 100; // 防止用户忘配置导致除0等错误
-//         on_frame = 100;
-//         frame_counter = 0;
-//         note_index = 0;
-//         frame_per_beat = 200;
-//     }
-//
-//     // 若遇到参数配置的单元，就配置，但必须移动到有控制发声的单元
-//     bool is_freq_set = false;
-//     do
-//     {
-//         if (soundtrack[note_index].GetPeriod() == 0)
-//         {
-//             frame_per_beat = BPM2Period(soundtrack[note_index].GetPitch());
-//             frame_counter = 0;
-//             if (++note_index >= track_length) note_index = 0;
-//         }
-//         else
-//         {
-//             uint16_t pitch = soundtrack[note_index].GetPitch();
-//             uint16_t duty = soundtrack[note_index].GetOnRatio();
-//             if (frame_counter >= on_frame) pitch = 0;
-//             ChangeFreqDuty(pitch, duty);
-//             is_freq_set = true;
-//         }
-//     } while (!is_freq_set);
-//
-//     // 前往下一帧
-//     if (++frame_counter >= duration_frames)
-//     {
-//         if (++note_index >= track_length) note_index = 0;
-//         frame_counter = 0;
-//     }
-// }
+    void ControlLoop(const uint8_t period)
+    {
+        UpdateTriggers();
+        UpdateOutput(period);
+    }
+} // namespace ega::Buzzer

@@ -24,16 +24,47 @@ bool cArm::RxCallback(const uint8_t* data)
 
 void cArm::GetDataFromRc()
 {
-    if (rc_data.GetRcSwitchA() == LOW)
+    if (rc_data.GetRcSwitchB() == LOW)
     {
-        target_x += rc_data.GetRcLeftVertical();
-        target_y += rc_data.GetRcRightVertical();
-        target_theta += rc_data.GetRcRightHorizontal() / 100.0f;
+        target_x_last = target_x;
+        target_y_last = target_y;
+        target_theta_last = target_theta;
+
+        target_x += rc_data.GetRcLeftVertical() * 0.7f;
+        target_y += rc_data.GetRcRightVertical() * 0.7f;
+
+        target_wrist -= rc_data.GetRcRightHorizontal() * 10.0f;
+        target_wrist = Clamp(target_wrist, 300, 3980);
+        target_pos_ecd[3] = static_cast<uint16_t>(target_wrist);
+
+        target_x = Clamp(target_x, -200, 300);
+        target_y = Clamp(target_y, -200, 300);
+    }
+    else if (rc_data.GetRcSwitchA() == LOW)
+    {
+        target_x_last = target_x;
+        target_y_last = target_y;
+        target_theta_last = target_theta;
+
+        target_x += rc_data.GetRcLeftVertical() * cosf(target_theta) * 0.7f; // rc_data.GetRcLeftVertical();
+        target_y += rc_data.GetRcLeftVertical() * sinf(target_theta) * 0.7f; // rc_data.GetRcRightVertical()
+        target_theta += rc_data.GetRcRightVertical() / 100.0f;
+
+        target_wrist -= rc_data.GetRcRightHorizontal() * 10.0f;
+        target_wrist = Clamp(target_wrist, 300, 3980);
+        target_pos_ecd[3] = static_cast<uint16_t>(target_wrist);
 
         target_x = Clamp(target_x, -200, 300);
         target_y = Clamp(target_y, -200, 300);
         target_theta = Clamp(target_theta, -M_PI * 3 / 5, M_PI * 3 / 4);
     }
+    else
+    {
+        target_theta += rc_data.GetRcRightVertical() / 100.0f;
+        target_theta = Clamp(target_theta, -M_PI * 3 / 5, M_PI * 3 / 4);
+    }
+    target_gripper = Map(rc_data.GetRcKnobLeft(), -783.0, 783.0, 1400, 2870);
+    target_pos_ecd[4] = static_cast<uint16_t>(target_gripper);
 }
 
 bool cArm::SolveArm()
@@ -45,10 +76,8 @@ bool cArm::SolveArm()
             static_cast<int16_t>(motors[i].zero_point_ecd + static_cast<int16_t>(agl * 4096.0 / (2 * M_PI)));
     };
 
-    // const float X = target_x;// - l3 * cosf(target_theta);
-    // const float Y = target_y;// - l3 * sinf(target_theta);
-    const float X = target_x - l3 * cosf(target_theta);
-    const float Y = target_y - l3 * sinf(target_theta);
+    const float X = target_x;// - l3 * cosf(target_theta);
+    const float Y = target_y;// - l3 * sinf(target_theta);
     const float R = X*X + Y*Y >= 1.0f ? sqrtf(X*X + Y*Y) : 0.0f;
     const float K = (l2*l2 + X*X + Y*Y - l1*l1) / (2.0f*l2);
     if (R < 1e-6f) return false;
@@ -98,6 +127,11 @@ bool cArm::SolveArm()
     return false;
 }
 
+void cArm::SolveEnd()
+{
+
+}
+
 void cArm::DeSolveArm(const int16_t p1, const int16_t p2, const int16_t p3) const
 {
     auto Ecd2Rad = [this] (const int16_t ecd, const size_t i)
@@ -112,21 +146,21 @@ void cArm::DeSolveArm(const int16_t p1, const int16_t p2, const int16_t p3) cons
     const float c_rad = Ecd2Rad(p3, 3);
 
     const float theta = a_rad + b_rad + c_rad;
-    const float x = -l1 * sinf(a_rad) + l2 * cosf(a_rad + b_rad) + l3 * cosf(theta);
-    const float y =  l1 * cosf(a_rad) + l2 * sinf(a_rad + b_rad) + l3 * sinf(theta);
+    const float x = -l1 * sinf(a_rad) + l2 * cosf(a_rad + b_rad);// + l3 * cosf(theta);
+    const float y =  l1 * cosf(a_rad) + l2 * sinf(a_rad + b_rad);// + l3 * sinf(theta);
 
     usart_printf("%.1f,%.1f,%.1f,%.1f,%.1f,%.1f\n",target_x,target_y,Rad2Angle(target_theta),x,y,Rad2Angle(theta));
 }
 
 void cArm::TransmitBusControlCmd()
-{
-    uart10_tx_buffer[1] = uart10_tx_buffer[0] = 0xFF; 
+{   // 帧头
+    uart10_tx_buffer[1] = uart10_tx_buffer[0] = 0xFF;
     uart10_tx_buffer[2] = 0xFE;
     uart10_tx_buffer[3] = 0x16;
     uart10_tx_buffer[4] = 0x83;
     uart10_tx_buffer[5] = static_cast<uint8_t>(cMotorSts::REG::TARGET_POSITION_L);
     uart10_tx_buffer[6] = 0x02;
-
+    // 命令
     uint8_t idx = 7;
     for (const auto& motor : motors)
     {
@@ -139,19 +173,28 @@ void cArm::TransmitBusControlCmd()
 
         idx += 3;
     }
-    
+    // 校验和
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < idx; i++)
         check_sum += uart10_tx_buffer[i];
     check_sum = ~check_sum;
     uart10_tx_buffer[idx] = check_sum;
-
+    // 发送
     HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx);
 }
 
 void cArm::ControlLoop()
 {
-    GetDataFromRc();
-    SolveArm();
+    if (rc_data.IsRcOnline())
+    {
+        GetDataFromRc();
+        if (!SolveArm())
+        {
+            target_x = target_x_last;
+            target_y = target_y_last;
+            target_theta = target_theta_last;
+        }
+        SolveEnd();
+    }
 }
 

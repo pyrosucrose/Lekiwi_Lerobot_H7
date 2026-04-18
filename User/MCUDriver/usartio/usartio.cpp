@@ -8,7 +8,7 @@
 #include <cstdarg>
 #include <cstdio>
 
-#include "buzzer.hpp"
+#include "../../Framework/Buzzer_old/buzzerh.txt"
 #include "remote.hpp"
 #include "template.hpp"
 #include "Robot/robot.hpp"

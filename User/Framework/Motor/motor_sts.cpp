@@ -219,7 +219,6 @@ void cMotorSts::TransmitWriteCommand(const REG reg, int16_t value) const
     uart10_tx_buffer[5] = static_cast<uint8_t>(reg);     // RegStart
     uart10_tx_buffer[6] = value;                         // SetValue
 
-
     if (!is_16_bit_reg)
     {
         const uint8_t check_sum = ~(uart10_tx_buffer[2] +

@@ -4,7 +4,7 @@
 
 // =============================== 引入头文件 ===============================
 #include "remote.hpp"
-#include "buzzer.hpp"
+#include "../Buzzer_old/buzzerh.txt"
 
 // =============================== 宏定义区 ===============================
 #if REMOTE_TYPE == DT7
@@ -133,7 +133,7 @@ void cRemoteData::RcUpdateValue(const uint8_t *rc_data)
     rc_switch_C = ReturnSwitchStatus(rc_switch_C);
     rc_switch_D = ReturnSwitchStatus(rc_switch_D);
 
-    if (rc_switch_C == HIGH || rc_data[23] >> 2 & 0x01 || rc_data[23] >> 3 & 0x01)
+    if (rc_data[23] >> 2 & 0x01 || rc_data[23] >> 3 & 0x01)
     {
         counter = 1145;
         rc_online = false;

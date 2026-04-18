@@ -2,8 +2,8 @@
 // Created by Glucose_carbide on 25-8-8.
 //
 
-#ifndef TEMPLATE_HPP
-#define TEMPLATE_HPP
+#ifndef ROBOT_SEND_TASK_HPP
+#define ROBOT_SEND_TASK_HPP
 
 // =============================== 调用库 ===============================
 
@@ -12,7 +12,8 @@
 // =============================== 变量区 ===============================
 
 // =============================== 函数声明 ===============================
+void RobotSendTask(void *pv);
 
 // =============================== 类声明 ===============================
 
-#endif // TEMPLATE_HPP
+#endif // ROBOT_SEND_TASK_HPP

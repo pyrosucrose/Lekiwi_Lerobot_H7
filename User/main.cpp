@@ -4,12 +4,13 @@
 
 #include "main.h"
 #include "cmsis_os.h"
-#include "buzzer.hpp"
+#include "Framework/Buzzer_old/buzzerh.txt"
 // #include "iwdg.h"
 #include "usartio.hpp"
 #include "start_task.hpp"
 #include "motor_sts.hpp"
 #include "config.hpp"
+#include "buzzer.h"
 #include "remote.hpp"
 #include "robot.hpp"
 
@@ -17,8 +18,8 @@ void BSP_Init();
 void User_Init()
 {
     Usartio_Init();
-    usart_printf("1\n");
-    // TASK_StartInit();
+    Buzzer::Init();
+    TASK_StartInit();
 }
 
 int main()
@@ -38,9 +39,10 @@ int main()
 
     while (true)
     {
-        robot_lekiwi.ControlLoop();
+        // usart_printf("1\n");
+        // robot_lekiwi.ControlLoop();
         // buzzer.ControlLoop();
-        // HAL_Delay(TASK_BUZZER_TASK_PERIOD);
+        HAL_Delay(TASK_BUZZER_TASK_PERIOD);
     }
     // while (true)
     // {

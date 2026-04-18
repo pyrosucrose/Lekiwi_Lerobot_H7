@@ -9,7 +9,10 @@
 #include "cmsis_os.h"
 #include "buzzer_task.hpp"
 #include "debug_task.hpp"
+#include "robot_send_task.hpp"
+#include "robot_task.hpp"
 #include "usart.h"
+#include "usartio.hpp"
 
 // =============================== 宏定义区 ===============================
 
@@ -21,6 +24,8 @@ void BSP_LoopTask(void *pv);
 
 TaskHandle_t task_create_handle;
 
+TaskHandle_t robot_task_handle;
+TaskHandle_t robot_send_task_handle;
 TaskHandle_t buzzer_task_handle;
 TaskHandle_t debug_task_handle;
 TaskHandle_t bsp_task_handle;
@@ -49,10 +54,24 @@ void TASK_CreateTask(void *pv)
 
     xTaskCreate((TaskFunction_t) BuzzerTask,
         "BuzzerTask",
-        128,
+        512,
+        nullptr,
+        3,
+        &buzzer_task_handle);
+
+    xTaskCreate((TaskFunction_t) RobotTask,
+        "RobotTask",
+        1024,
         nullptr,
         4,
-        &buzzer_task_handle);
+        &robot_task_handle);
+
+    xTaskCreate((TaskFunction_t) RobotSendTask,
+        "RobotSendTask",
+        1024,
+        nullptr,
+        4,
+        &robot_send_task_handle);
 
     xTaskCreate((TaskFunction_t) DebugTask,
         "DebugTask",
@@ -85,7 +104,8 @@ void BSP_LoopTask(void *pv)
 {
     while (true)
     {
-        vTaskDelay(5);
+        HAL_Delay(5);
+        // usart_printf("1\n");
     }
 }
 

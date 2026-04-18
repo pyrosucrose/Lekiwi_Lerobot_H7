@@ -27,14 +27,14 @@ void cRobot::ControlLoop()
         chassis.ControlLoop();
         arm.ControlLoop();
 
-        arm.motors[0].TransmitWriteCommand(cMotorSts::REG::TARGET_POSITION_L, 2048); HAL_Delay(1);
-        arm.motors[1].TransmitWriteCommand(cMotorSts::REG::TARGET_POSITION_L, static_cast<int16_t>(arm.target_pos_ecd[0])); HAL_Delay(1);
-        arm.motors[2].TransmitWriteCommand(cMotorSts::REG::TARGET_POSITION_L, static_cast<int16_t>(arm.target_pos_ecd[1])); HAL_Delay(1);
-        arm.motors[3].TransmitWriteCommand(cMotorSts::REG::TARGET_POSITION_L, static_cast<int16_t>(arm.target_pos_ecd[2])); HAL_Delay(1);
-
-        chassis.motors[0].TransmitWriteCommand(cMotorSts::REG::TARGET_SPEED_L, static_cast<int16_t>(-chassis.target_wheel_speed[0])); HAL_Delay(1);
-        chassis.motors[1].TransmitWriteCommand(cMotorSts::REG::TARGET_SPEED_L, static_cast<int16_t>(-chassis.target_wheel_speed[1])); HAL_Delay(1);
-        chassis.motors[2].TransmitWriteCommand(cMotorSts::REG::TARGET_SPEED_L, static_cast<int16_t>(-chassis.target_wheel_speed[2])); HAL_Delay(1);
+        // arm.motors[0].TransmitWriteCommand(cMotorSts::REG::TARGET_POSITION_L, 2048); HAL_Delay(1);
+        // arm.motors[1].TransmitWriteCommand(cMotorSts::REG::TARGET_POSITION_L, static_cast<int16_t>(arm.target_pos_ecd[0])); HAL_Delay(1);
+        // arm.motors[2].TransmitWriteCommand(cMotorSts::REG::TARGET_POSITION_L, static_cast<int16_t>(arm.target_pos_ecd[1])); HAL_Delay(1);
+        // arm.motors[3].TransmitWriteCommand(cMotorSts::REG::TARGET_POSITION_L, static_cast<int16_t>(arm.target_pos_ecd[2])); HAL_Delay(1);
+        //
+        // chassis.motors[0].TransmitWriteCommand(cMotorSts::REG::TARGET_SPEED_L, static_cast<int16_t>(-chassis.target_wheel_speed[0])); HAL_Delay(1);
+        // chassis.motors[1].TransmitWriteCommand(cMotorSts::REG::TARGET_SPEED_L, static_cast<int16_t>(-chassis.target_wheel_speed[1])); HAL_Delay(1);
+        // chassis.motors[2].TransmitWriteCommand(cMotorSts::REG::TARGET_SPEED_L, static_cast<int16_t>(-chassis.target_wheel_speed[2])); HAL_Delay(1);
 
     }
 }
