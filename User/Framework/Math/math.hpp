@@ -2,8 +2,7 @@
 // Created by Glucose_carbide on 25-8-8.
 //
 
-#ifndef MATH_HPP
-#define MATH_HPP
+#pragma once
 
 // =============================== 调用库 ===============================
 #include <cstdint>
@@ -70,5 +69,3 @@ bool Limit(float* value, float min, float max);
 {
     return (target >= std::min(num1, num2) - tolerance) && (target <= std::max(num1, num2) + tolerance);
 }
-
-#endif // MATH_HPP

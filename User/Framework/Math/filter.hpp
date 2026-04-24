@@ -2,8 +2,7 @@
 // Created by Glucose_carbide on 25-8-8.
 //
 
-#ifndef FILTER_HPP
-#define FILTER_HPP
+#pragma once
 
 // =============================== 调用库 ===============================
 
@@ -54,5 +53,3 @@ private:
     float last_value = 0;      // 上一次滤波后的值
     bool initialized = false;      // 是否已初始化
 };
-
-#endif // FILTER_HPP

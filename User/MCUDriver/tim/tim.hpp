@@ -2,8 +2,7 @@
 // Created by Glucose_carbide on 25-8-8.
 //
 
-#ifndef TIM_HPP
-#define TIM_HPP
+#pragma once
 
 // =============================== 调用库 ===============================
 #include "tim.h"
@@ -30,5 +29,3 @@ private:
     TIM_HandleTypeDef* htim;
     uint32_t tim_channel;
 };
-
-#endif // TIM_HPP

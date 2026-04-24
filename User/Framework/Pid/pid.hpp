@@ -2,8 +2,7 @@
 // Created by Glucose_carbide on 25-8-8.
 //
 
-#ifndef PID_HPP
-#define PID_HPP
+#pragma once
 
 // =============================== 调用库 ===============================
 
@@ -63,4 +62,3 @@ private:
 
     float precision_ = 0;               // 精确范围
 };
-#endif // PID_HPP

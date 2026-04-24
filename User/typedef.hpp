@@ -2,8 +2,7 @@
 // Created by Glucose_carbide on 25-8-8
 //
 
-#ifndef TYPEDEF_HPP
-#define TYPEDEF_HPP
+#pragma once
 
 #include <cstdint>
 
@@ -104,5 +103,3 @@ typedef enum
     CAN_DMJ8009_M3_SEND_ID = 0x003,
     CAN_DMJ8009_M4_SEND_ID = 0x004,
 } eCan2MotorId_DM;
-
-#endif // TYPEDEF_HPP

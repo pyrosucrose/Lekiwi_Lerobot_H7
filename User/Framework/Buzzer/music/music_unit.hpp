@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "music_pitch.h"
+#include "music_pitch.hpp"
 
 namespace Buzzer
 {

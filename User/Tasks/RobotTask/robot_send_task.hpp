@@ -2,8 +2,7 @@
 // Created by Glucose_carbide on 25-8-8.
 //
 
-#ifndef ROBOT_SEND_TASK_HPP
-#define ROBOT_SEND_TASK_HPP
+#pragma once
 
 // =============================== 调用库 ===============================
 
@@ -15,5 +14,3 @@
 void RobotSendTask(void *pv);
 
 // =============================== 类声明 ===============================
-
-#endif // ROBOT_SEND_TASK_HPP

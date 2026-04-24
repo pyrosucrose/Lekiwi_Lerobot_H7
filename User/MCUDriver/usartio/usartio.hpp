@@ -2,8 +2,7 @@
 // Created by Glucose_carbide on 25-8-8.
 //
 
-#ifndef USARTIO_HPP
-#define USARTIO_HPP
+#pragma once
 
 // =============================== 调用库 ===============================
 #include "usart.h"
@@ -32,5 +31,3 @@ void Usartio_Init();
 void usart_printf(const char *format, ...);
 
 // =============================== 类声明 ===============================
-
-#endif // USARTIO_HPP

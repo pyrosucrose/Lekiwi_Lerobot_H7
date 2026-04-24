@@ -9,7 +9,7 @@
 #include "start_task.hpp"
 #include "motor_sts.hpp"
 #include "config.hpp"
-#include "buzzer.h"
+#include "buzzer.hpp"
 #include "remote.hpp"
 #include "robot.hpp"
 

@@ -2,8 +2,7 @@
 // Created by Glucose_carbide on 25-8-8.
 //
 
-#ifndef CONFIG_HPP
-#define CONFIG_HPP
+#pragma once
 
 // =============================== 调用库 ===============================
 #include <cstdint>
@@ -46,5 +45,3 @@ inline constexpr uint8_t TASK_LED_TASK_PERIOD        = 5;
 inline const float CHASSIS_RADIUS   = sqrtf(CHASSIS_HALF_LENGTH * CHASSIS_HALF_LENGTH +\
                                             CHASSIS_HALF_WIDTH * CHASSIS_HALF_WIDTH);
 
-
-#endif // CONFIG_HPP

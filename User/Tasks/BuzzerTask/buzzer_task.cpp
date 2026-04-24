@@ -10,8 +10,8 @@
 #include "config.hpp"
 #include "FreeRTOS.h"
 #include "task.h"
-#include "buzzer.h"
-#include "music_soundtrack.h"
+#include "buzzer.hpp"
+#include "music_soundtrack.hpp"
 #include "remote.hpp"
 #include "usartio.hpp"
 
@@ -46,7 +46,7 @@ void BuzzerTask(void *pv)
     {
         // usart_printf("2\n");
         current_time = xTaskGetTickCount();         //获取当前tick（时间）
-        Buzzer::ControlLoop(TASK_BUZZER_TASK_PERIOD);
+        Buzzer::ControlLoop();
         sa = rc_data.GetRcSwitchA() != UP;
         sb = rc_data.GetRcSwitchB() != UP;
         sd = rc_data.GetRcSwitchD() != UP;

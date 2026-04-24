@@ -2,8 +2,7 @@
 // Created by Glucose_carbide on 25-8-8.
 //
 
-#ifndef DELAY_HPP
-#define DELAY_HPP
+#pragma once
 
 // =============================== 调用库 ===============================
 #include <cstdint>
@@ -18,5 +17,3 @@ void Delay_us(uint16_t miu_seconds);
 void Delay_ms(uint16_t milliseconds);
 
 // =============================== 类声明 ===============================
-
-#endif // DELAY_HPP

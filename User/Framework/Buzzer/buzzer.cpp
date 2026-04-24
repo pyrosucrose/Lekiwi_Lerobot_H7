@@ -2,10 +2,12 @@
 // Created by Glucose_carbide on 2026-4-15.
 //
 
-#include "buzzer.h"
+#include "buzzer.hpp"
 
 #include <iterator>
-#include "music_soundtrack.h"
+
+#include "config.hpp"
+#include "music_soundtrack.hpp"
 #include "tim.hpp"
 #include "usartio.hpp"
 
@@ -55,7 +57,7 @@ namespace Buzzer
                 Mute();
         }
 
-        void UpdateOutput(const uint8_t period)
+        void UpdateOutput()
         {
             uint16_t pitch_now;
             uint8_t duty_now;
@@ -66,7 +68,7 @@ namespace Buzzer
                 pitch_now = block_notes[block_play_idx].pitch;
                 duty_now = 50;
 
-                block_notes[block_play_idx].duration_ms -= period;
+                block_notes[block_play_idx].duration_ms -= TASK_BUZZER_TASK_PERIOD;
 
                 if (block_notes[block_play_idx].duration_ms <= 0)
                 {
@@ -95,7 +97,7 @@ namespace Buzzer
                     if (i != best_track)
                         tracks[i].reload();
                     else
-                        tracks[i].update(period);
+                        tracks[i].update();
                 }
 
                 pitch_now = tracks[best_track].getPitch();
@@ -109,7 +111,7 @@ namespace Buzzer
     {
         tim.Init();
         SetTone(2000); // 在buzzer::loop开始前会一直响 // 妙(板)一直响!
-        AddToNoteTrack(do_5, 80);
+        AddToNoteTrack(do_6, 80);
         AddToNoteTrack(mute, 750);
         AddToNoteTrack(do_5, 60);
         AddToNoteTrack(fa_5, 60);
@@ -159,9 +161,9 @@ namespace Buzzer
     {
     }
 
-    void ControlLoop(const uint8_t period)
+    void ControlLoop()
     {
         UpdateTriggers();
-        UpdateOutput(period);
+        UpdateOutput();
     }
 } // namespace ega::Buzzer

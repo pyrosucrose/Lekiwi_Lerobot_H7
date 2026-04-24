@@ -2,8 +2,7 @@
 // Created by Glucose_carbide on 25-8-8.
 //
 
-#ifndef REMOTE_HPP
-#define REMOTE_HPP
+#pragma once
 
 // =============================== 调用库 ===============================
 #include "usartio.hpp"
@@ -96,5 +95,3 @@ private:
 };
 
 extern cRemoteData rc_data;
-
-#endif // REMOTE_HPP

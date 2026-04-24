@@ -2,8 +2,7 @@
 // Created by Glucose_carbide on 25-8-8.
 //
 
-#ifndef MOTOR_STS_HPP
-#define MOTOR_STS_HPP
+#pragma once
 
 // =============================== 调用库 ===============================
 #include <cstdint>
@@ -139,5 +138,3 @@ public:
     int16_t target_vel = 0;
     int16_t target_pos = 0;
 };
-
-#endif // MOTOR_STS_HPP

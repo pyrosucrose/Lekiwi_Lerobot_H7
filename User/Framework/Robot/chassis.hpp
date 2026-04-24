@@ -2,8 +2,7 @@
 // Created by Glucose_carbide on 25-8-8.
 //
 
-#ifndef CHASSIS_HPP
-#define CHASSIS_HPP
+#pragma once
 
 // =============================== 调用库 ===============================
 #include "motor_sts.hpp"
@@ -41,6 +40,3 @@ public:
     float target_wheel_speed[3] = {};
     cMotorSts motors[3];
 };
-
-
-#endif // CHASSIS_HPP

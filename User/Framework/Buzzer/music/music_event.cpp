@@ -2,8 +2,9 @@
 // Created by Glucose_carbide on 2026-04-15.
 //
 
-#include "music_event.h"
+#include "music_event.hpp"
 
+#include "config.hpp"
 #include "usartio.hpp"
 
 namespace Buzzer
@@ -15,7 +16,7 @@ namespace Buzzer
         return 60000 / bpm;
     }
 
-    void MusicEvent::update(const uint8_t period)
+    void MusicEvent::update()
     {
         if (track_ == nullptr || trig_ == nullptr || track_len_ <= 1)
         {   // safety check
@@ -55,7 +56,6 @@ namespace Buzzer
         }
 
         // 如果遇到note单元，则播放
-        // const auto& [pitch, beats, on_percent, duty_percent] = track_[idx_].getNote();
         const uint16_t pitch = track_[idx_].GetPitch();
         const uint8_t beats = track_[idx_].GetBeats();
         const uint8_t on_percent = track_[idx_].GetOnRatio() * 100 / 0xF;
@@ -73,8 +73,8 @@ namespace Buzzer
         duty_ = gate_left_ms_ > 0 ? duty : 0;
 
         // 计数与单元结束处理
-        note_left_ms_ -= period;
-        gate_left_ms_ -= period;
+        note_left_ms_ -= TASK_BUZZER_TASK_PERIOD;
+        gate_left_ms_ -= TASK_BUZZER_TASK_PERIOD;
 
         if (note_left_ms_ <= 0)
         {

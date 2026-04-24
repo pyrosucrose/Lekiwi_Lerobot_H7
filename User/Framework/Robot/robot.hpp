@@ -2,9 +2,7 @@
 // Created by Glucose_carbide on 25-8-8.
 //
 
-#ifndef ROBOT_HPP
-#define ROBOT_HPP
-
+#pragma once
 // =============================== 调用库 ===============================
 #include "arm.hpp"
 #include "chassis.hpp"
@@ -28,5 +26,3 @@ public:
 };
 
 inline cRobot robot_lekiwi;
-
-#endif // ROBOT_HPP

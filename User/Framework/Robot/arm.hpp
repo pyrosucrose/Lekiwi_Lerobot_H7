@@ -2,8 +2,7 @@
 // Created by Glucose_carbide on 25-8-8.
 //
 
-#ifndef ARM_HPP
-#define ARM_HPP
+#pragma once
 
 // =============================== 调用库 ===============================
 #include "motor_sts.hpp"
@@ -47,5 +46,3 @@ public:
     const float l1 = 115,l2 = 135,l3 = 165;
     cMotorSts motors[6];
 };
-
-#endif // ARM_HPP

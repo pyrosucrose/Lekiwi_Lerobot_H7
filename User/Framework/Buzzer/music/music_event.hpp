@@ -6,7 +6,7 @@
 
 #include <cstdint>
 
-#include "music_unit.h"
+#include "music_unit.hpp"
 
 namespace Buzzer
 {
@@ -40,7 +40,7 @@ namespace Buzzer
         [[nodiscard]] uint16_t getPitch() const { return hz_; }
         [[nodiscard]] uint8_t getDuty() const { return duty_; }
 
-        void update(uint8_t period);
+        void update();
         void reload();
         void reset();
 

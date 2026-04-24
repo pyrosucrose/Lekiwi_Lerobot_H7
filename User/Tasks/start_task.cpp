@@ -11,7 +11,6 @@
 #include "debug_task.hpp"
 #include "robot_send_task.hpp"
 #include "robot_task.hpp"
-#include "usart.h"
 #include "usartio.hpp"
 
 // =============================== 宏定义区 ===============================
@@ -49,55 +48,53 @@ void TASK_StartInit()
 
 void TASK_CreateTask(void *pv)
 {
-    BaseType_t xReturn;
-    taskENTER_CRITICAL();
+    BaseType_t xReturn = pdPASS;
 
-    xTaskCreate((TaskFunction_t) BuzzerTask,
+    taskENTER_CRITICAL();
+    xReturn &=
+        xTaskCreate((TaskFunction_t) BuzzerTask,
         "BuzzerTask",
         512,
         nullptr,
         3,
         &buzzer_task_handle);
 
-    xTaskCreate((TaskFunction_t) RobotTask,
+    xReturn &=
+        xTaskCreate((TaskFunction_t) RobotTask,
         "RobotTask",
         1024,
         nullptr,
         4,
         &robot_task_handle);
 
-    xTaskCreate((TaskFunction_t) RobotSendTask,
+    xReturn &=
+        xTaskCreate((TaskFunction_t) RobotSendTask,
         "RobotSendTask",
         1024,
         nullptr,
         4,
         &robot_send_task_handle);
 
-    xTaskCreate((TaskFunction_t) DebugTask,
+    xReturn &=
+        xTaskCreate((TaskFunction_t) DebugTask,
         "DebugTask",
         128,
         nullptr,
         1,
         &debug_task_handle);
 
-    //
-    // xTaskCreate((TaskFunction_t) RefereeTask,
-    //     "RefereeTask",
-    //     512,
-    //     (void *) NULL,
-    //     6,
-    //     &referee_task_handle);
-
-    xReturn = xTaskCreate((TaskFunction_t) BSP_LoopTask,
+    xReturn &=
+        xTaskCreate((TaskFunction_t) BSP_LoopTask,
         "BSPTask",
         128,
         (void *) nullptr,
         1,
         &bsp_task_handle);
-
     taskEXIT_CRITICAL();
-    if (pdFALSE != xReturn)
-        vTaskDelete(task_create_handle);
+
+    if (xReturn != pdPASS)
+        Error_Handler();
+    vTaskDelete(task_create_handle);
 }
 
 void BSP_LoopTask(void *pv)
@@ -108,5 +105,3 @@ void BSP_LoopTask(void *pv)
         // usart_printf("1\n");
     }
 }
-
-// int16_t cmd_control = 0;

@@ -1,26 +1,20 @@
 //
-// Created by Glucose_carbide on 25-8-8.
+// Created by Glucose_carbide on 26-04-24.
 //
 
-#ifndef MUSIC_SOUNDTRACK_H
-#define MUSIC_SOUNDTRACK_H
+#pragma once
 
-// =============================== 调用库 ===============================
-#include "music_pitch.h"
-
-// =============================== 宏定义区 ===============================
-
-// =============================== 变量区 ===============================
+#include "music_pitch.hpp"
 
 namespace Buzzer::Soundtracks
 {
-    inline constexpr MusicUnit soundtrack_mute[] = {
+    constexpr MusicUnit soundtrack_mute[] = {
         {440,0,0},
         {mute, 100},
         {mute, 100}
     };
 
-    inline constexpr MusicUnit soundtrack_pure_fries[] = {
+    constexpr MusicUnit soundtrack_pure_fries[] = {
         {440,0,0},
         {la_4,1,13}, {la_4,1,13},
         {re_5,8}, {mi_5,8}, {fa_5,8}, {so_5,4},
@@ -48,7 +42,7 @@ namespace Buzzer::Soundtracks
         // {fa_5,2}, {so_5,8}
     };
 
-    inline constexpr uint16_t soundtrack_keil1[] = { 180,
+    constexpr uint16_t soundtrack_keil1[] = { 180,
         do_3, do_3, do_3, do_3, do_3, do_3, do_3, do_3,
         fa_3, fa_3, fa_3, fa_3, fa_3, fa_3, fa_3, fa_3,
         rep3, rep3, rep3, rep3, rep3, rep3, rep3, lap2,
@@ -59,13 +53,13 @@ namespace Buzzer::Soundtracks
         do_3, do_3, do_3, do_3, do_3, do_3, do_3, do_3,
     };
 
-    inline constexpr uint16_t soundtrack_spring_shadow[] = {360,
+    constexpr uint16_t soundtrack_spring_shadow[] = {360,
         mi_4, mi_4, mi_4, mi_4, re_4, re_4, do_4, do_4,
         do_4, do_4, re_4, re_4, mi_4, mi_4, mi_4, fa_4,
         mi_4, mi_4, re_4, re_4, re_4, re_4, re_4, re_4
     };
 
-    inline constexpr MusicUnit soundtrack_immortal_ash[] = {
+    constexpr MusicUnit soundtrack_immortal_ash[] = {
         {330,0},
 
         // {fap3,4},{sop3},{la_3},{dop4,2},{fap3,5},
@@ -119,7 +113,7 @@ namespace Buzzer::Soundtracks
         // {mute, 8}
     };
 
-    inline constexpr MusicUnit soundtrack_idoratrize_world[] = {
+    constexpr MusicUnit soundtrack_idoratrize_world[] = {
         {680,0,0},
         {so_2,2},{do_3,2},{re_3,2},{fa_3,2},{re_3,2},{do_3,2},
         {so_2,2},{do_3,2},{re_3,2},{fa_3,2},{re_3,2},{do_3,2},
@@ -188,7 +182,7 @@ namespace Buzzer::Soundtracks
         {mute, 100}
     };
 
-    inline constexpr MusicUnit soundtrack_watery_graves[] = {
+    constexpr MusicUnit soundtrack_watery_graves[] = {
         {424,0,0},
         // {2000,0,0},
         // {so_3,1,13},{so_3,1,13},{re_4,1,13},{re_4,1,13},{so_4,1,13},{so_4,1,13},{re_4,1,13},{re_4,1,13},
@@ -277,7 +271,7 @@ namespace Buzzer::Soundtracks
         // {do_4,2},{rep4,3,12},{fa_4,3,12},{re_4,3,12},{lap3,3,12},{so_3,2,12},
     };
 
-    inline constexpr MusicUnit oriental_dream_1[] = {
+    constexpr MusicUnit oriental_dream_1[] = {
         {200,0,0},
         // Arpeggio & Final Cadence
         {so_4, 2}, {fa_4, 1}, {do_5, 1},
@@ -342,7 +336,7 @@ namespace Buzzer::Soundtracks
 
         {do_4, 4}};
 
-    inline constexpr uint16_t soundtrack_watery_graves_u16[] = {426,
+    constexpr uint16_t soundtrack_watery_graves_u16[] = {426,
         so_3, so_3, so_4, so_4, fap4, fap4, re_4, re_4, fa_4, fa_4, mi_4, mi_4, mute, mute, mi_4, mi_4,
         so_3, so_3, re_4, re_4, so_4, so_4, re_4, re_4, so_3, so_3, re_4, re_4, so_4, so_4, re_4, re_4,
         so_3, so_3, so_4, so_4, fap4, fap4, re_4, re_4, fa_4, fa_4, mi_4, mi_4, mute, mute, mi_4, mi_4,
@@ -400,7 +394,7 @@ namespace Buzzer::Soundtracks
         do_5, do_5, fa_4, fa_4, fa_5, fa_5, lap4, lap4, lap4, lap4, lap4, lap4, mute, mute, mute, mute
     };
 
-    inline constexpr uint16_t soundtrack_oriental_dream_1[] = {
+    constexpr uint16_t soundtrack_oriental_dream_1[] = {
         so_4, so_4, fa_4, do_5, so_4, so_4, fa_4, do_5, so_4, so_4, fa_4, do_5, so_4, so_4, fa_4, do_5,
         so_4, so_4, fa_4, do_5, so_4, so_4, fa_4, do_5, so_4, so_4, fa_4, do_5, so_4, so_4, fa_4, do_5,
         so_4, dop4, fa_4, do_5, so_4, dop4, do_5, fa_4, so_4, dop4, fa_4, do_5, so_4, dop4, do_5, fa_4,
@@ -426,7 +420,7 @@ namespace Buzzer::Soundtracks
         do_4, do_4, do_4, do_4
     };
 
-    inline constexpr uint16_t soundtrack_oriental_dream_2[] = {
+    constexpr uint16_t soundtrack_oriental_dream_2[] = {
         mute, mute, mute, mute, mute, mute, mute, mute, mute, mute, mute, mute, mute, mute, mute, mute,
         rep5, rep5, rep5, rep5, rep5, rep5, rep5, rep5, rep5, rep5, rep5, rep5, rep5, rep5, rep5, rep5,
         re_5, re_5, re_5, re_5, re_5, re_5, re_5, re_5, re_5, re_5, re_5, re_5, re_5, re_5, re_5, do_5,
@@ -452,9 +446,3 @@ namespace Buzzer::Soundtracks
         do_5, do_5, do_5, do_5
     };
 }
-
-// =============================== 函数声明 ===============================
-
-// =============================== 类声明 ===============================
-
-#endif // MUSIC_SOUNDTRACK_H
