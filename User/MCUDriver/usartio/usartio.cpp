@@ -8,10 +8,9 @@
 #include <cstdarg>
 #include <cstdio>
 
-#include "../../Framework/Buzzer_old/buzzerh.txt"
 #include "remote.hpp"
 #include "template.hpp"
-#include "Robot/robot.hpp"
+#include "robot.hpp"
 
 // =============================== 宏定义区 ===============================
 

@@ -7,7 +7,6 @@
 #include "config.hpp"
 #include "FreeRTOS.h"
 #include "task.h"
-#include "../../Framework/Buzzer_old/buzzerh.txt"
 #include "remote.hpp"
 #include "robot.hpp"
 #include "usartio.hpp"

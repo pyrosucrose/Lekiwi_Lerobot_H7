@@ -39,9 +39,9 @@ void BuzzerTask(void *pv)
         Buzzer::Soundtracks::soundtrack_watery_graves, std::size(Buzzer::Soundtracks::soundtrack_watery_graves),
         8, &sd, true, true
     };
-    Buzzer::AddConfig(cfg_sa);
-    Buzzer::AddConfig(cfg_sb);
-    Buzzer::AddConfig(cfg_sc);
+    // Buzzer::AddConfig(cfg_sa);
+    // Buzzer::AddConfig(cfg_sb);
+    // Buzzer::AddConfig(cfg_sc);
     while (true)
     {
         // usart_printf("2\n");

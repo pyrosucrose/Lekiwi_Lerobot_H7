@@ -109,7 +109,20 @@ namespace Buzzer
     {
         tim.Init();
         SetTone(2000); // 在buzzer::loop开始前会一直响 // 妙(板)一直响!
-        AddToNoteTrack(Pitch::do_5, 25);
+        AddToNoteTrack(do_5, 80);
+        AddToNoteTrack(mute, 750);
+        AddToNoteTrack(do_5, 60);
+        AddToNoteTrack(fa_5, 60);
+        AddToNoteTrack(fa_6, 60);
+        AddToNoteTrack(lap5, 60);
+        AddToNoteTrack(so_6, 60);
+        AddToNoteTrack(fa_5, 60);
+        AddToNoteTrack(lap6, 60);
+        AddToNoteTrack(fa_5, 60);
+        AddToNoteTrack(do_7, 60);
+        AddToNoteTrack(lap5, 60);
+        AddToNoteTrack(do_6, 60);
+        AddToNoteTrack(mute, 300);
         tracks[0] = MusicEvent(default_config);
     }
 

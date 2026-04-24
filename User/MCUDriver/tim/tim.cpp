@@ -24,11 +24,9 @@ void cTim::Mute() const
 
 void cTim::ChangeFreqDuty(const uint16_t freq, const uint8_t duty) const
 {
-    if (freq != 0)
+    if (freq >= 16)
     {
-        uint16_t arr = 1000000 / freq;
-        if (arr >= 65535)
-            arr = 65535;
+        const uint16_t arr = 1000000 / freq;
         __HAL_TIM_SetAutoreload(htim, arr);
         // htim->Instance->ARR = arr;
         ChangeDuty(duty);

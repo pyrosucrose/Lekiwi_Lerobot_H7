@@ -6,7 +6,7 @@
 
 #include <cstdint>
 
-namespace Buzzer::Pitch
+namespace Buzzer
 {
     //调用时可以using namespace ega::Buzzer::pitch;但请注意作用域污染
     inline constexpr uint16_t
