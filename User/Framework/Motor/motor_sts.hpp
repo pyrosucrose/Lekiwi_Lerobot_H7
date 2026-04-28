@@ -20,6 +20,8 @@ void STS_TransmitBusCommand();
 // =============================== 类声明 ===============================
 class cMotorSts
 {
+    static constexpr uint8_t MAX_MOTORS_COUNT = 20;
+    static constexpr bool DEBUG_MODE = false;
 public:
     enum class REG : uint8_t
     {
@@ -94,7 +96,7 @@ public:
         NOW_CURRENT_H            = 0x46, // R
     };
 
-    enum class CALLBACK_TYPE : uint8_t
+    enum CALLBACK_TYPE : uint8_t
     {
         STATE_PARAMS = 0x00,
         CONFIG_PARAMS,
@@ -103,18 +105,20 @@ public:
         WRONG_LENGTH,
         WRONG_CHECKSUM, // Fatal fault
     };
-    cMotorSts(const uint8_t ID, const uint16_t zero_point, const uint16_t min_angle, const uint16_t max_angle, const bool reversed = false) :
-        ID(ID), zero_point_ecd(zero_point), min_angle_ecd(min_angle), max_angle_ecd(max_angle), is_reversed(reversed) {}
-    ~cMotorSts() = default;
+    cMotorSts(uint8_t ID, uint16_t zero_point, uint16_t min_angle, uint16_t max_angle, bool reversed = false);
+    ~cMotorSts();
 
     void AddReadReg(REG reg);
     void AddReadRangeByCount(REG start, uint8_t count);
     void AddReadRange(REG start, REG end);
+    void SetReadRange(REG start, REG end);
     void TransmitReadCommand() const;
-    void TransmitWriteCommand(REG reg, int16_t value) const;
-    CALLBACK_TYPE RxCallback(const uint8_t* data);
+    void TransmitWriteCommand(REG reg, uint16_t value) const;
+    CALLBACK_TYPE UnpackData(const uint8_t* data);
 
-    [[nodiscard]] static inline bool Is16BitWriteReg(REG reg);
+    static void ControlAll();
+    static void ReadAll(REG start, REG end);
+    static bool RxCallback(const uint8_t* data);
 
     const uint16_t zero_point_ecd;
     const uint16_t min_angle_ecd;
@@ -135,6 +139,10 @@ public:
     uint8_t temp_ecd = 0;
     int16_t cur_ecd = 0;
 
-    int16_t target_vel = 0;
-    int16_t target_pos = 0;
+    uint16_t target_vel = 2048;
+    uint16_t target_pos = 0;
+
+    static inline uint8_t motors_count_ = 0;
+    static inline cMotorSts* motors_[MAX_MOTORS_COUNT];
 };
+

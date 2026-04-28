@@ -11,6 +11,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "buzzer.hpp"
+#include "delay.hpp"
 #include "music_soundtrack.hpp"
 #include "remote.hpp"
 #include "usartio.hpp"

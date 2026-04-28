@@ -85,7 +85,7 @@ bool Round_p(float* p_value, const float limit)
 
 /**
  * @brief   将传入的数据(通常是角度)滚到[-limit/2, limit/2]间并返回
- * @param   value: 待处理的角度指针
+ * @param   value: 待处理的角度值
  * @param   limit: 限幅范围，会将输入的角度滚在[-limit/2, limit/2]间
  * @note    是将数据累加/累减到范围中(类似int溢出)，而不是钳制
  * @note    务必确认传入的单位正确！

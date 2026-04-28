@@ -20,7 +20,7 @@
 bool cChassis::RxCallback(const uint8_t* data)
 {
     for (auto& motor : motors)
-        if (motor.RxCallback(data) == cMotorSts::CALLBACK_TYPE::STATE_PARAMS)
+        if (motor.UnpackData(data) == cMotorSts::CALLBACK_TYPE::STATE_PARAMS)
             return true;
     return false;
 }
@@ -61,35 +61,62 @@ void cChassis::SolveWheelSpeed()
     target_wheel_speed[0] = target_speed[Z] - target_speed[X];
     target_wheel_speed[1] = target_speed[Z] + target_speed[X] * 0.5f - target_speed[Y] * (sqrtf(3.0f) / 2);
     target_wheel_speed[2] = target_speed[Z] + target_speed[X] * 0.5f + target_speed[Y] * (sqrtf(3.0f) / 2);
+    for (uint8_t i = 0; i < 3; i++)
+        motors[i].target_vel = static_cast<uint16_t>(static_cast<int16_t>(-target_wheel_speed[i]));
 }
 
 void cChassis::TransmitBusControlCmd()
 {   // 帧头
-    uart10_tx_buffer[1] = uart10_tx_buffer[0] = 0xFF;
-    uart10_tx_buffer[2] = 0xFE;
-    uart10_tx_buffer[3] = 0x16;
-    uart10_tx_buffer[4] = 0x83;
-    uart10_tx_buffer[5] = static_cast<uint8_t>(cMotorSts::REG::TARGET_SPEED_L);
-    uart10_tx_buffer[6] = 0x02;
+    uint8_t idx = 0;
+    uart10_tx_buffer[idx++] = 0xFF;
+    uart10_tx_buffer[idx++] = 0xFF;
+    uart10_tx_buffer[idx++] = 0xFE;
+    uart10_tx_buffer[idx++] = 0x0D;
+    uart10_tx_buffer[idx++] = 0x83;
+    uart10_tx_buffer[idx++] = static_cast<uint8_t>(cMotorSts::REG::TARGET_SPEED_L);
+    uart10_tx_buffer[idx++] = 0x02;
     // 命令
-    uint8_t idx = 7;
     for (const auto& motor : motors)
     {
-        int16_t val = motor.target_vel;
-        if ((val & 0x8000) != 0) val = static_cast<int16_t>(-(val & 0x7FFF));
+        uint16_t val = motor.target_vel;
+        if ((val & 0x8000) != 0) val = static_cast<uint16_t>(-(val & 0x7FFF));
 
-        uart10_tx_buffer[idx] = motor.ID;
-        uart10_tx_buffer[idx + 1] = val;
-        uart10_tx_buffer[idx + 2] = val >> 8;
-
-        idx += 3;
+        uart10_tx_buffer[idx++] = motor.ID;
+        uart10_tx_buffer[idx++] = val;
+        uart10_tx_buffer[idx++] = val >> 8;
     }
     // 校验和
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < idx; i++)
         check_sum += uart10_tx_buffer[i];
     check_sum = ~check_sum;
-    uart10_tx_buffer[idx] = check_sum;
+    uart10_tx_buffer[idx++] = check_sum;
+    // 发送
+    HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx);
+}
+
+void cChassis::DisableAll()
+{   // 帧头
+    uint8_t idx = 0;
+    uart10_tx_buffer[idx++] = 0xFF;
+    uart10_tx_buffer[idx++] = 0xFF;
+    uart10_tx_buffer[idx++] = 0xFE;
+    uart10_tx_buffer[idx++] = 0x0A;
+    uart10_tx_buffer[idx++] = 0x83;
+    uart10_tx_buffer[idx++] = static_cast<uint8_t>(cMotorSts::REG::TORQUE_SWITCH);
+    uart10_tx_buffer[idx++] = 0x01;
+    // 命令
+    for (const auto& motor : motors)
+    {
+        uart10_tx_buffer[idx++] = motor.ID;
+        uart10_tx_buffer[idx++] = 0;
+    }
+    // 校验和
+    uint8_t check_sum = 0;
+    for (uint8_t i = 2; i < idx; i++)
+        check_sum += uart10_tx_buffer[i];
+    // check_sum = ~check_sum;
+    uart10_tx_buffer[idx++] = ~check_sum;
     // 发送
     HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx);
 }

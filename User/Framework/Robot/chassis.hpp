@@ -32,6 +32,7 @@ public:
     bool RxCallback(const uint8_t* data);
     void ControlLoop();
     void TransmitBusControlCmd();
+    void DisableAll();
 
     void GetDataFromRc();
     void SolveWheelSpeed();

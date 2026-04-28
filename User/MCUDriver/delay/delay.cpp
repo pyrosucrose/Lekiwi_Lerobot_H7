@@ -4,16 +4,13 @@
 
 // =============================== 引入头文件 ===============================
 #include "delay.hpp"
-#include "stm32h7xx_hal.h"
 
 // =============================== 宏定义区 ===============================
 
 // =============================== 变量区 ==================================
-static uint8_t miu_seconds_factor   = SystemCoreClock / 1000000;
-static uint32_t milliseconds_factor = SystemCoreClock / 1000;
+
 
 // =============================== 函数实现 ===============================
-
 /**
   * @brief  微秒级延时
   * @param  miu_seconds: 要延时的微秒数
@@ -58,7 +55,7 @@ void Delay_us(uint16_t miu_seconds)
   * @param  milliseconds: 要延时的毫秒数
   * @note   使用SysTick定时器实现精确毫秒延时
   */
-void delay_ms(uint16_t milliseconds)
+void Delay_ms(uint16_t milliseconds)
 {
     uint32_t target_ticks = 0;
     uint32_t time_previous = 0;

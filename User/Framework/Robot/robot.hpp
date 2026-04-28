@@ -19,6 +19,7 @@ class cRobot
 public:
     void RxCallback(const uint8_t* data);
     void ControlLoop();
+    void SendControl();
 
     cArm arm;
     cChassis chassis;

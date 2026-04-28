@@ -6,7 +6,7 @@
 
 // =============================== 调用库 ===============================
 #include <cstdint>
-#include <cmath>
+#include "math.tpp"
 
 // =============================== 宏定义区 ===============================
 
@@ -17,19 +17,19 @@
 [[nodiscard]] float Max_List(const float *list, uint8_t len = 4);
 [[nodiscard]] float Min_List(const float *list, uint8_t len = 4);
 bool Round_p(float* p_value, float limit = 360.0f);
-float Round_v(float value, float limit = 360.0f);
+[[nodiscard]] float Round_v(float value, float limit = 360.0f);
 bool Limit(float* value, float min, float max);
 
 // =============================== 库函数实现 ===============================
 
 /// 角度值转为弧度值
-[[nodiscard]] inline float Angle2Rad(const float angle)
+[[nodiscard]] inline float Degree2Rad(const float angle)
 {
     return static_cast<float>(angle * M_PI / 180.0f);
 }
 
 /// 弧度值转为角度值
-[[nodiscard]] inline float Rad2Angle(const float rad)
+[[nodiscard]] inline float Rad2Degree(const float rad)
 {
     return static_cast<float>(rad * 180.0f / M_PI);
 }

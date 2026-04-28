@@ -28,9 +28,10 @@ public:
         }
     {}
     bool RxCallback(const uint8_t* data);
-    void DeSolveArm(int16_t p1, int16_t p2, int16_t p3) const;
+    void DeSolveArm() const;
     void ControlLoop();
     void TransmitBusControlCmd();
+    void DisableAll();
 
     void GetDataFromRc();
     bool SolveArm();
@@ -42,7 +43,7 @@ public:
     // float target_x = 40.0f, target_y = 40.0f, target_theta = -1.0f;
     float target_wrist = 2057, target_gripper = 1412;
 
-    uint16_t target_pos_ecd[6] = {0,0,0,2057,};
+    uint16_t target_pos_ecd[6] = {2048,0,0,0,2057,};
     const float l1 = 115,l2 = 135,l3 = 165;
     cMotorSts motors[6];
 };

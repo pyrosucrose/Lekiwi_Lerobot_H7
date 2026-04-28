@@ -35,9 +35,9 @@ inline constexpr float CHASSIS_HALF_WIDTH            = 0.175f;  // 四个轮子�
 /** Set The Values */
 /* FreeRTOS中，每个task的周期(毫秒) */
 inline constexpr uint8_t TASK_BMI_TASK_PERIOD        = 2;
-inline constexpr uint8_t TASK_BUZZER_TASK_PERIOD     = 2;
+inline constexpr uint8_t TASK_BUZZER_TASK_PERIOD     = 5;
 inline constexpr uint8_t TASK_ROBOT_TASK_PERIOD      = 5;
-inline constexpr uint8_t TASK_ROBOT_SEND_TASK_PERIOD = 2;
+inline constexpr uint8_t TASK_ROBOT_SEND_TASK_PERIOD = 3;
 inline constexpr uint8_t TASK_DEBUG_TASK_PERIOD      = 4;
 inline constexpr uint8_t TASK_LED_TASK_PERIOD        = 5;
 

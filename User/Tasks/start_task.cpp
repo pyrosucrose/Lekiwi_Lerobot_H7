@@ -9,6 +9,8 @@
 #include "cmsis_os.h"
 #include "buzzer_task.hpp"
 #include "debug_task.hpp"
+#include "iwdg.h"
+#include "remote.hpp"
 #include "robot_send_task.hpp"
 #include "robot_task.hpp"
 #include "usartio.hpp"
@@ -102,6 +104,8 @@ void BSP_LoopTask(void *pv)
     while (true)
     {
         HAL_Delay(5);
+        if (rc_data.IsRcOnline())
+            HAL_IWDG_Refresh(&hiwdg1);
         // usart_printf("1\n");
     }
 }
