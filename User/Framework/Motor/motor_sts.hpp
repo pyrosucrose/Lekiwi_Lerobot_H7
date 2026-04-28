@@ -21,6 +21,7 @@ void STS_TransmitBusCommand();
 class cMotorSts
 {
     static constexpr uint8_t MAX_MOTORS_COUNT = 20;
+    static constexpr uint8_t MAX_BUF_LEN = 32;
     static constexpr bool DEBUG_MODE = false;
 public:
     enum class REG : uint8_t
@@ -96,15 +97,6 @@ public:
         NOW_CURRENT_H            = 0x46, // R
     };
 
-    enum CALLBACK_TYPE : uint8_t
-    {
-        STATE_PARAMS = 0x00,
-        CONFIG_PARAMS,
-        WRONG_ID,
-        WRONG_HEAD,     // Fatal fault
-        WRONG_LENGTH,
-        WRONG_CHECKSUM, // Fatal fault
-    };
     cMotorSts(uint8_t ID, uint16_t zero_point, uint16_t min_angle, uint16_t max_angle, bool reversed = false);
     ~cMotorSts();
 
@@ -114,11 +106,12 @@ public:
     void SetReadRange(REG start, REG end);
     void TransmitReadCommand() const;
     void TransmitWriteCommand(REG reg, uint16_t value) const;
-    CALLBACK_TYPE UnpackData(const uint8_t* data);
+    void UnpackData();
 
     static void ControlAll();
     static void ReadAll(REG start, REG end);
-    static bool RxCallback(const uint8_t* data);
+    static void RxCallback(const uint8_t* data);
+    static void UnpackAll();
 
     const uint16_t zero_point_ecd;
     const uint16_t min_angle_ecd;
@@ -141,6 +134,8 @@ public:
 
     uint16_t target_vel = 2048;
     uint16_t target_pos = 0;
+
+    uint8_t rx_buffer[MAX_BUF_LEN] = {};
 
     static inline uint8_t motors_count_ = 0;
     static inline cMotorSts* motors_[MAX_MOTORS_COUNT];

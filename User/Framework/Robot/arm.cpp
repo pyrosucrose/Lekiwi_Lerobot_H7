@@ -13,15 +13,6 @@
 // =============================== 变量区 ==================================
 
 // =============================== 函数实现 ===============================
-
-bool cArm::RxCallback(const uint8_t* data)
-{
-    for (auto& motor : motors)
-        if (motor.UnpackData(data) == cMotorSts::CALLBACK_TYPE::STATE_PARAMS)
-            return true;
-    return false;
-}
-
 void cArm::GetDataFromRc()
 {
     if (rc_data.GetRcSwitchB() == LOW)
@@ -222,6 +213,6 @@ void cArm::ControlLoop()
         SolveEnd();
         for (uint8_t i = 0; i < 6; i++)
             motors[i].target_pos = target_pos_ecd[i];
-        DeSolveArm();
+        // DeSolveArm();
     }
 }

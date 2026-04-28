@@ -27,7 +27,6 @@ public:
         {6,1412,1400,2870,false},
         }
     {}
-    bool RxCallback(const uint8_t* data);
     void DeSolveArm() const;
     void ControlLoop();
     void TransmitBusControlCmd();

@@ -16,15 +16,6 @@
 // =============================== 变量区 ==================================
 
 // =============================== 函数实现 ===============================
-
-bool cChassis::RxCallback(const uint8_t* data)
-{
-    for (auto& motor : motors)
-        if (motor.UnpackData(data) == cMotorSts::CALLBACK_TYPE::STATE_PARAMS)
-            return true;
-    return false;
-}
-
 void cChassis::GetDataFromRc()
 {
     if (rc_data.GetRcSwitchA() == HIGH && rc_data.GetRcSwitchB() == HIGH)

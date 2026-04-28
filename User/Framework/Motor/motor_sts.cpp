@@ -5,6 +5,8 @@
 // =============================== 引入头文件 ===============================
 #include "motor_sts.hpp"
 
+#include <cstring>
+
 #include "delay.hpp"
 #include "usartio.hpp"
 
@@ -85,14 +87,13 @@ cMotorSts::~cMotorSts()
     Error_Handler();
 }
 
-bool cMotorSts::RxCallback(const uint8_t* data)
+void cMotorSts::RxCallback(const uint8_t* data)
 {
     if (data[0] != 0xFF || data[1] != 0xFF)
     {
-    usart_printf("1\n");
-        return false;   // 数据错乱不处理
+        usart_printf("1\n");
+        return;   // 数据错乱不处理
     }
-
 
     const uint8_t param_len = data[3] - 2;
     uint8_t check_sum = 0;
@@ -101,8 +102,8 @@ bool cMotorSts::RxCallback(const uint8_t* data)
     check_sum = ~check_sum;
     if (data[param_len + 5] != check_sum)
     {
-    usart_printf("2\n");
-        return false;     // 校验和不匹配不处理
+        usart_printf("2\n");
+        return;     // 校验和不匹配不处理
     }
 
     const uint8_t ID = data[2];
@@ -110,42 +111,36 @@ bool cMotorSts::RxCallback(const uint8_t* data)
     {
         if (motors_[i]->ID == ID)
         {
-
-            motors_[i]->UnpackData(data);
-            // usart_printf("%d\n",ID);
-
-            return true;
+            if (data[3] + 2 < MAX_BUF_LEN)
+                memcpy(motors_[i]->rx_buffer, &data[3], data[3] + 2);
+            else
+                Error_Handler();
+            return;
         }
     }
-
-    return false;
 }
 
-cMotorSts::CALLBACK_TYPE cMotorSts::UnpackData(const uint8_t* data)
+void cMotorSts::UnpackAll()
 {
-    // if (data[2] != ID) return WRONG_ID;                                  // serial_ID匹配才处理
-    // if (data[0] != 0xFF || data[1] != 0xFF) return WRONG_HEAD;           // 数据错乱不处理
-    // if (param_len != read_reg_h - read_reg_l + 1) return WRONG_LENGTH;   // 参数长度不匹配不处理
-    // uint8_t check_sum = 0;
-    // for (uint8_t i = 2; i < param_len + 5; i++)
-    //     check_sum += data[i];
-    // check_sum = ~check_sum;
-    // if (data[param_len + 5] != check_sum) return WRONG_CHECKSUM;         // 校验和不匹配不处理
+    for (uint8_t i = 0; i < motors_count_; i++)
+        motors_[i]->UnpackData();
+}
 
-    const uint8_t param_len = data[3] - 2;
+void cMotorSts::UnpackData()
+{
+    status = rx_buffer[1]; error = status;  // 错误码处理
 
-    status = data[4]; error = status;  // 错误码处理
-
-    for (uint8_t i = 5, cnt = 0; cnt < param_len; i++, cnt++)
+    const uint8_t param_len = rx_buffer[0] - 2;
+    for (uint8_t i = 2, cnt = 0; cnt < param_len; i++, cnt++)
     {
         switch(static_cast<REG>(read_reg_l + cnt))
         {
-        case REG::NOW_POS_L:    pos_ecd = PackStsData(data[i], data[i + 1]); break;
-        case REG::NOW_SPEED_L:  vel_ecd = PackStsData(data[i], data[i + 1]); break;
-        case REG::NOW_LOAD_L:   load_ecd = PackStsData(data[i], data[i + 1]); break;
-        case REG::NOW_VOLT:     volt_ecd = data[i]; break;
-        case REG::NOW_TEMP:     temp_ecd = data[i]; break;
-        case REG::NOW_CURRENT_L:cur_ecd = PackStsData(data[i], data[i + 1]); break;
+        case REG::NOW_POS_L:    pos_ecd  = PackStsData(rx_buffer[i], rx_buffer[i + 1]); break;
+        case REG::NOW_SPEED_L:  vel_ecd  = PackStsData(rx_buffer[i], rx_buffer[i + 1]); break;
+        case REG::NOW_LOAD_L:   load_ecd = PackStsData(rx_buffer[i], rx_buffer[i + 1]); break;
+        case REG::NOW_VOLT:     volt_ecd = rx_buffer[i]; break;
+        case REG::NOW_TEMP:     temp_ecd = rx_buffer[i]; break;
+        case REG::NOW_CURRENT_L:cur_ecd  = PackStsData(rx_buffer[i], rx_buffer[i + 1]); break;
         default: break;
         }
 
@@ -154,66 +149,65 @@ cMotorSts::CALLBACK_TYPE cMotorSts::UnpackData(const uint8_t* data)
             switch(static_cast<REG>(read_reg_l + cnt))
             {
             // RO(EPROM)
-            case REG::FIRMWARE_MAJOR_VERSION:   usart_printf("[0x%02X] firmware major version: 0x%02X\n", ID, data[i]);                                         break;
-            case REG::FIRMWARE_MINOR_VERSION:   usart_printf("[0x%02X] firmware minor version: 0x%02X\n", ID, data[i]);                                         break;
-            case REG::END_MARKER:               usart_printf("[0x%02X] end marker: 0x%02X\n", ID, data[i]);                                                     break;
-            case REG::SERVO_MAJOR_VERSION:      usart_printf("[0x%02X] servo major version: 0x%02X\n", ID, data[i]);                                            break;
-            case REG::SERVO_MINOR_VERSION:      usart_printf("[0x%02X] servo minor version: 0x%02X\n", ID, data[i]);                                            break;
+            case REG::FIRMWARE_MAJOR_VERSION:   usart_printf("[0x%02X] firmware major version: 0x%02X\n", ID, rx_buffer[i]);                                         break;
+            case REG::FIRMWARE_MINOR_VERSION:   usart_printf("[0x%02X] firmware minor version: 0x%02X\n", ID, rx_buffer[i]);                                         break;
+            case REG::END_MARKER:               usart_printf("[0x%02X] end marker: 0x%02X\n", ID, rx_buffer[i]);                                                     break;
+            case REG::SERVO_MAJOR_VERSION:      usart_printf("[0x%02X] servo major version: 0x%02X\n", ID, rx_buffer[i]);                                            break;
+            case REG::SERVO_MINOR_VERSION:      usart_printf("[0x%02X] servo minor version: 0x%02X\n", ID, rx_buffer[i]);                                            break;
             // RW(EPROM)
-            case REG::ID:                       usart_printf("[0x%02X] id: 0x%02X\n", ID, data[i]);                                                             break;
-            case REG::BAUD_RATE:                usart_printf("[0x%02X] baud rate: 0x%02X\n", ID, data[i]);                                                      break;
-            case REG::RETURN_DELAY:             usart_printf("[0x%02X] return delay: 0x%02X\n", ID, data[i]);                                                   break;
-            case REG::RESPONSE_STATUS_LEVEL:    usart_printf("[0x%02X] response status level: 0x%02X\n", ID, data[i]);                                          break;
-            case REG::MIN_ANGLE_LIMIT_L:        usart_printf("[0x%02X] min angle limit: 0x%04X\n", ID, static_cast<uint16_t>(data[i + 1] << 8 | data[i]));      break;
-            case REG::MAX_ANGLE_LIMIT_L:        usart_printf("[0x%02X] max angle limit: 0x%04X\n", ID, static_cast<uint16_t>(data[i + 1] << 8 | data[i]));      break;
-            case REG::MAX_TEMPERATURE:          usart_printf("[0x%02X] max temperature: 0x%02X\n", ID, data[i]);                                                break;
-            case REG::MAX_VOLTAGE:              usart_printf("[0x%02X] max voltage: 0x%02X\n", ID, data[i]);                                                    break;
-            case REG::MIN_VOLTAGE:              usart_printf("[0x%02X] min voltage: 0x%02X\n", ID, data[i]);                                                    break;
-            case REG::MAX_TORQUE_L:             usart_printf("[0x%02X] max torque: 0x%04X\n", ID, static_cast<uint16_t>(data[i + 1] << 8 | data[i]));           break;
-            case REG::PHASE:                    usart_printf("[0x%02X] phase: 0x%02X\n", ID, data[i]);                                                          break;
-            case REG::UNLOAD_CONDITION:         usart_printf("[0x%02X] unload condition: 0x%02X\n", ID, data[i]);                                               break;
-            case REG::LED_ALARM_CONDITION:      usart_printf("[0x%02X] led alarm condition: 0x%02X\n", ID, data[i]);                                            break;
-            case REG::POS_P_GAIN:               usart_printf("[0x%02X] pos p gain: 0x%02X\n", ID, data[i]);                                                     break;
-            case REG::POS_D_GAIN:               usart_printf("[0x%02X] pos d gain: 0x%02X\n", ID, data[i]);                                                     break;
-            case REG::POS_I_GAIN:               usart_printf("[0x%02X] pos i gain: 0x%02X\n", ID, data[i]);                                                     break;
-            case REG::MIN_START_TORQUE:         usart_printf("[0x%02X] min start torque: 0x%02X\n", ID, data[i]);                                               break;
-            case REG::INTEGRAL_LIMIT:           usart_printf("[0x%02X] integral limit: 0x%02X\n", ID, data[i]);                                                 break;
-            case REG::CW_DEAD_ZONE:             usart_printf("[0x%02X] cw dead zone: 0x%02X\n", ID, data[i]);                                                   break;
-            case REG::CCW_DEAD_ZONE:            usart_printf("[0x%02X] ccw dead zone: 0x%02X\n", ID, data[i]);                                                  break;
-            case REG::PROTECTION_CURRENT_L:     usart_printf("[0x%02X] protection current: 0x%02X\n", ID, static_cast<uint16_t>(data[i + 1] << 8 | data[i]));   break;
-            case REG::ANGLE_RESOLUTION:         usart_printf("[0x%02X] angle resolution: 0x%02X\n", ID, data[i]);                                               break;
-            case REG::POSITION_CORRECTION_L:    usart_printf("[0x%02X] position correction: 0x%04X\n", ID, static_cast<int16_t>(data[i + 1] << 8 | data[i]));   break;
-            case REG::OPERATION_MODE:           usart_printf("[0x%02X] operation mode: 0x%02X\n", ID, data[i]);                                                 break;
-            case REG::PROTECTION_TORQUE:        usart_printf("[0x%02X] protection torque: 0x%02X\n", ID, data[i]);                                              break;
-            case REG::PROTECTION_TIME:          usart_printf("[0x%02X] protection time: 0x%02X\n", ID, data[i]);                                                break;
-            case REG::OVERLOAD_TORQUE:          usart_printf("[0x%02X] overload torque: 0x%02X\n", ID, data[i]);                                                break;
-            case REG::SPEED_P_GAIN:             usart_printf("[0x%02X] speed p gain: 0x%02X\n", ID, data[i]);                                                   break;
-            case REG::OVERCURRENT_PROTECT_TIME: usart_printf("[0x%02X] overcurrent protect time: 0x%02X\n", ID, data[i]);                                       break;
-            case REG::SPEED_I_GAIN:             usart_printf("[0x%02X] speed i gain: 0x%02X\n", ID, data[i]);                                                   break;
+            case REG::ID:                       usart_printf("[0x%02X] id: 0x%02X\n", ID, rx_buffer[i]);                                                             break;
+            case REG::BAUD_RATE:                usart_printf("[0x%02X] baud rate: 0x%02X\n", ID, rx_buffer[i]);                                                      break;
+            case REG::RETURN_DELAY:             usart_printf("[0x%02X] return delay: 0x%02X\n", ID, rx_buffer[i]);                                                   break;
+            case REG::RESPONSE_STATUS_LEVEL:    usart_printf("[0x%02X] response status level: 0x%02X\n", ID, rx_buffer[i]);                                          break;
+            case REG::MIN_ANGLE_LIMIT_L:        usart_printf("[0x%02X] min angle limit: 0x%04X\n", ID, static_cast<uint16_t>(rx_buffer[i + 1] << 8 | rx_buffer[i]));      break;
+            case REG::MAX_ANGLE_LIMIT_L:        usart_printf("[0x%02X] max angle limit: 0x%04X\n", ID, static_cast<uint16_t>(rx_buffer[i + 1] << 8 | rx_buffer[i]));      break;
+            case REG::MAX_TEMPERATURE:          usart_printf("[0x%02X] max temperature: 0x%02X\n", ID, rx_buffer[i]);                                                break;
+            case REG::MAX_VOLTAGE:              usart_printf("[0x%02X] max voltage: 0x%02X\n", ID, rx_buffer[i]);                                                    break;
+            case REG::MIN_VOLTAGE:              usart_printf("[0x%02X] min voltage: 0x%02X\n", ID, rx_buffer[i]);                                                    break;
+            case REG::MAX_TORQUE_L:             usart_printf("[0x%02X] max torque: 0x%04X\n", ID, static_cast<uint16_t>(rx_buffer[i + 1] << 8 | rx_buffer[i]));           break;
+            case REG::PHASE:                    usart_printf("[0x%02X] phase: 0x%02X\n", ID, rx_buffer[i]);                                                          break;
+            case REG::UNLOAD_CONDITION:         usart_printf("[0x%02X] unload condition: 0x%02X\n", ID, rx_buffer[i]);                                               break;
+            case REG::LED_ALARM_CONDITION:      usart_printf("[0x%02X] led alarm condition: 0x%02X\n", ID, rx_buffer[i]);                                            break;
+            case REG::POS_P_GAIN:               usart_printf("[0x%02X] pos p gain: 0x%02X\n", ID, rx_buffer[i]);                                                     break;
+            case REG::POS_D_GAIN:               usart_printf("[0x%02X] pos d gain: 0x%02X\n", ID, rx_buffer[i]);                                                     break;
+            case REG::POS_I_GAIN:               usart_printf("[0x%02X] pos i gain: 0x%02X\n", ID, rx_buffer[i]);                                                     break;
+            case REG::MIN_START_TORQUE:         usart_printf("[0x%02X] min start torque: 0x%02X\n", ID, rx_buffer[i]);                                               break;
+            case REG::INTEGRAL_LIMIT:           usart_printf("[0x%02X] integral limit: 0x%02X\n", ID, rx_buffer[i]);                                                 break;
+            case REG::CW_DEAD_ZONE:             usart_printf("[0x%02X] cw dead zone: 0x%02X\n", ID, rx_buffer[i]);                                                   break;
+            case REG::CCW_DEAD_ZONE:            usart_printf("[0x%02X] ccw dead zone: 0x%02X\n", ID, rx_buffer[i]);                                                  break;
+            case REG::PROTECTION_CURRENT_L:     usart_printf("[0x%02X] protection current: 0x%02X\n", ID, static_cast<uint16_t>(rx_buffer[i + 1] << 8 | rx_buffer[i]));   break;
+            case REG::ANGLE_RESOLUTION:         usart_printf("[0x%02X] angle resolution: 0x%02X\n", ID, rx_buffer[i]);                                               break;
+            case REG::POSITION_CORRECTION_L:    usart_printf("[0x%02X] position correction: 0x%04X\n", ID, static_cast<int16_t>(rx_buffer[i + 1] << 8 | rx_buffer[i]));   break;
+            case REG::OPERATION_MODE:           usart_printf("[0x%02X] operation mode: 0x%02X\n", ID, rx_buffer[i]);                                                 break;
+            case REG::PROTECTION_TORQUE:        usart_printf("[0x%02X] protection torque: 0x%02X\n", ID, rx_buffer[i]);                                              break;
+            case REG::PROTECTION_TIME:          usart_printf("[0x%02X] protection time: 0x%02X\n", ID, rx_buffer[i]);                                                break;
+            case REG::OVERLOAD_TORQUE:          usart_printf("[0x%02X] overload torque: 0x%02X\n", ID, rx_buffer[i]);                                                break;
+            case REG::SPEED_P_GAIN:             usart_printf("[0x%02X] speed p gain: 0x%02X\n", ID, rx_buffer[i]);                                                   break;
+            case REG::OVERCURRENT_PROTECT_TIME: usart_printf("[0x%02X] overcurrent protect time: 0x%02X\n", ID, rx_buffer[i]);                                       break;
+            case REG::SPEED_I_GAIN:             usart_printf("[0x%02X] speed i gain: 0x%02X\n", ID, rx_buffer[i]);                                                   break;
             // RW(SRAM)
-            case REG::TORQUE_SWITCH:            usart_printf("[0x%02X] torque switch: 0x%02X\n", ID, data[i]);                                                  break;
-            case REG::ACCELERATION:             usart_printf("[0x%02X] acceleration: 0x%02X\n", ID, data[i]);                                                   break;
-            case REG::TARGET_POSITION_L:        usart_printf("[0x%02X] goal position: 0x%04X\n", ID, static_cast<int16_t>(data[i + 1] << 8 | data[i]));         break;
-            case REG::MOVING_TIME_L:            usart_printf("[0x%02X] moving time: 0x%04X\n", ID, static_cast<uint16_t>(data[i + 1] << 8 | data[i]));          break;
-            case REG::TARGET_SPEED_L:           usart_printf("[0x%02X] goal speed: 0x%04X\n", ID, static_cast<int16_t>(data[i + 1] << 8 | data[i]));            break;
-            case REG::TORQUE_LIMIT_L:           usart_printf("[0x%02X] torque limit: 0x%04X\n", ID, static_cast<uint16_t>(data[i + 1] << 8 | data[i]));         break;
-            case REG::LOCK:                     usart_printf("[0x%02X] lock: 0x%02X\n", ID, data[i]);                                                           break;
+            case REG::TORQUE_SWITCH:            usart_printf("[0x%02X] torque switch: 0x%02X\n", ID, rx_buffer[i]);                                                  break;
+            case REG::ACCELERATION:             usart_printf("[0x%02X] acceleration: 0x%02X\n", ID, rx_buffer[i]);                                                   break;
+            case REG::TARGET_POSITION_L:        usart_printf("[0x%02X] goal position: 0x%04X\n", ID, static_cast<int16_t>(rx_buffer[i + 1] << 8 | rx_buffer[i]));         break;
+            case REG::MOVING_TIME_L:            usart_printf("[0x%02X] moving time: 0x%04X\n", ID, static_cast<uint16_t>(rx_buffer[i + 1] << 8 | rx_buffer[i]));          break;
+            case REG::TARGET_SPEED_L:           usart_printf("[0x%02X] goal speed: 0x%04X\n", ID, static_cast<int16_t>(rx_buffer[i + 1] << 8 | rx_buffer[i]));            break;
+            case REG::TORQUE_LIMIT_L:           usart_printf("[0x%02X] torque limit: 0x%04X\n", ID, static_cast<uint16_t>(rx_buffer[i + 1] << 8 | rx_buffer[i]));         break;
+            case REG::LOCK:                     usart_printf("[0x%02X] lock: 0x%02X\n", ID, rx_buffer[i]);                                                           break;
             // RO(SRAM)
-            case REG::NOW_POS_L:                usart_printf("[0x%02X] pos: 0x%04X\n", ID, static_cast<uint16_t>(data[i + 1] << 8 | data[i]));                  break;
-            case REG::NOW_SPEED_L:              usart_printf("[0x%02X] speed: 0x%04X\n", ID, static_cast<uint16_t>(data[i + 1] << 8 | data[i]));                break;
-            case REG::NOW_LOAD_L:               usart_printf("[0x%02X] load: 0x%04X\n", ID, static_cast<uint16_t>(data[i + 1] << 8 | data[i]));                 break;
-            case REG::NOW_VOLT:                 usart_printf("[0x%02X] volt: 0x%02X\n", ID, data[i]);                                                           break;
-            case REG::NOW_TEMP:                 usart_printf("[0x%02X] temp: 0x%02X\n", ID, data[i]);                                                           break;
-            case REG::ASYNCHRONOUS_WRITE:       usart_printf("[0x%02X] asynchronous write: 0x%02X\n", ID, data[i]);                                             break;
-            case REG::STATUS:                   usart_printf("[0x%02X] status: 0x%02X\n", ID, data[i]);                                                         break;
-            case REG::IS_MOVING:                usart_printf("[0x%02X] is moving: 0x%02X\n", ID, data[i]);                                                      break;
-            case REG::NOW_CURRENT_L:            usart_printf("[0x%02X] current: 0x%04X\n", ID, static_cast<uint16_t>(data[i + 1] << 8 | data[i]));              break;
+            case REG::NOW_POS_L:                usart_printf("[0x%02X] pos: 0x%04X\n", ID, static_cast<uint16_t>(rx_buffer[i + 1] << 8 | rx_buffer[i]));                  break;
+            case REG::NOW_SPEED_L:              usart_printf("[0x%02X] speed: 0x%04X\n", ID, static_cast<uint16_t>(rx_buffer[i + 1] << 8 | rx_buffer[i]));                break;
+            case REG::NOW_LOAD_L:               usart_printf("[0x%02X] load: 0x%04X\n", ID, static_cast<uint16_t>(rx_buffer[i + 1] << 8 | rx_buffer[i]));                 break;
+            case REG::NOW_VOLT:                 usart_printf("[0x%02X] volt: 0x%02X\n", ID, rx_buffer[i]);                                                           break;
+            case REG::NOW_TEMP:                 usart_printf("[0x%02X] temp: 0x%02X\n", ID, rx_buffer[i]);                                                           break;
+            case REG::ASYNCHRONOUS_WRITE:       usart_printf("[0x%02X] asynchronous write: 0x%02X\n", ID, rx_buffer[i]);                                             break;
+            case REG::STATUS:                   usart_printf("[0x%02X] status: 0x%02X\n", ID, rx_buffer[i]);                                                         break;
+            case REG::IS_MOVING:                usart_printf("[0x%02X] is moving: 0x%02X\n", ID, rx_buffer[i]);                                                      break;
+            case REG::NOW_CURRENT_L:            usart_printf("[0x%02X] current: 0x%04X\n", ID, static_cast<uint16_t>(rx_buffer[i + 1] << 8 | rx_buffer[i]));              break;
             default: break;
             }
         }
     }
     read_reg_l = 0xFF; read_reg_h = 0x00;
-    return STATE_PARAMS;
 }
 
 

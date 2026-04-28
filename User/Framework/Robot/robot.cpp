@@ -12,13 +12,6 @@
 // =============================== 变量区 ==================================
 
 // =============================== 函数实现 ===============================
-
-void cRobot::RxCallback(const uint8_t* data)
-{
-    if (arm.RxCallback(data)) return;
-    // chassis.RxCallback(data);
-}
-
 void cRobot::ControlLoop()
 {
     if (rc_data.IsRcOnline())

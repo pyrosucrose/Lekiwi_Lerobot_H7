@@ -44,11 +44,11 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 
     else if (huart->Instance == USART10)
     {
-        HAL_UARTEx_ReceiveToIdle_DMA(&huart10, uart10_rx_buffer, UART10_RX_BUFFER_SIZE);
         if (Size > 0)
         {
             cMotorSts::RxCallback(uart10_rx_buffer);
         }
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart10, uart10_rx_buffer, UART10_RX_BUFFER_SIZE);
     }
 
     else if (huart->Instance == UART5)
