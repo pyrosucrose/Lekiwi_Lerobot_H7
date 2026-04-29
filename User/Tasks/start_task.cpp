@@ -6,11 +6,13 @@
 #include "start_task.hpp"
 #include "FreeRTOS.h"
 #include "task.h"
-#include "buzzer_task.hpp"
 #include "crash.hpp"
-#include "debug_task.hpp"
 #include "iwdg.h"
 #include "remote.hpp"
+
+#include "buzzer_task.hpp"
+#include "debug_task.hpp"
+#include "motor_task.hpp"
 #include "robot_send_task.hpp"
 #include "robot_task.hpp"
 
@@ -24,11 +26,12 @@ void TASK_CreateTask(void *pv);
 
 TaskHandle_t task_create_handle;
 
-TaskHandle_t robot_task_handle;
-TaskHandle_t robot_send_task_handle;
+TaskHandle_t bsp_task_handle;
 TaskHandle_t buzzer_task_handle;
 TaskHandle_t debug_task_handle;
-TaskHandle_t bsp_task_handle;
+TaskHandle_t motor_task_handle;
+TaskHandle_t robot_task_handle;
+TaskHandle_t robot_send_task_handle;
 
 void TASK_StartInit()
 {
@@ -53,12 +56,36 @@ void TASK_CreateTask(void *pv)
 
     taskENTER_CRITICAL();
     xReturn &=
+        xTaskCreate((TaskFunction_t) BSP_LoopTask,
+        "BSPTask",
+        128,
+        nullptr,
+        1,
+        &bsp_task_handle);
+
+    xReturn &=
         xTaskCreate((TaskFunction_t) BuzzerTask,
         "BuzzerTask",
         512,
         nullptr,
         3,
         &buzzer_task_handle);
+
+    xReturn &=
+        xTaskCreate((TaskFunction_t) DebugTask,
+        "DebugTask",
+        128,
+        nullptr,
+        1,
+        &debug_task_handle);
+
+    xReturn &=
+        xTaskCreate((TaskFunction_t) MotorTask,
+        "MotorTask",
+        512,
+        nullptr,
+        6,
+        &motor_task_handle);
 
     xReturn &=
         xTaskCreate((TaskFunction_t) RobotTask,
@@ -75,22 +102,6 @@ void TASK_CreateTask(void *pv)
         nullptr,
         4,
         &robot_send_task_handle);
-
-    xReturn &=
-        xTaskCreate((TaskFunction_t) DebugTask,
-        "DebugTask",
-        128,
-        nullptr,
-        1,
-        &debug_task_handle);
-
-    xReturn &=
-        xTaskCreate((TaskFunction_t) BSP_LoopTask,
-        "BSPTask",
-        128,
-        nullptr,
-        1,
-        &bsp_task_handle);
     taskEXIT_CRITICAL();
 
     if (xReturn != pdPASS)

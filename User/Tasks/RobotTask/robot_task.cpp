@@ -18,10 +18,9 @@
 
 void RobotTask(void *pv)
 {
-    portTickType current_time;
+    portTickType current_time = xTaskGetTickCount();
     while (true)
     {
-        current_time = xTaskGetTickCount();         //获取当前tick（时间）
         robot_lekiwi.ControlLoop();
         vTaskDelayUntil(&current_time, pdMS_TO_TICKS(TASK_ROBOT_TASK_PERIOD));       //让任务以 5 毫秒的周期运行
     }

@@ -24,7 +24,6 @@
 
 void BuzzerTask(void *pv)
 {
-    portTickType current_time;
     bool sa = false;
     bool sb = false;
     bool sd = false;
@@ -43,14 +42,16 @@ void BuzzerTask(void *pv)
     // Buzzer::AddConfig(cfg_sa);
     // Buzzer::AddConfig(cfg_sb);
     // Buzzer::AddConfig(cfg_sc);
+    portTickType current_time = xTaskGetTickCount();         //获取当前tick（时间）
     while (true)
     {
         // usart_printf("2\n");
-        current_time = xTaskGetTickCount();         //获取当前tick（时间）
+        // auto s = Delay::GetTimeStamp();
         Buzzer::ControlLoop();
-        sa = rc_data.GetRcSwitchA() != UP;
-        sb = rc_data.GetRcSwitchB() != UP;
-        sd = rc_data.GetRcSwitchD() != UP;
+        sa = rc_data.GetRcSwitchA() != eRemoteSwitchValue::HIGH;
+        sb = rc_data.GetRcSwitchB() != eRemoteSwitchValue::HIGH;
+        sd = rc_data.GetRcSwitchD() != eRemoteSwitchValue::HIGH;
         vTaskDelayUntil(&current_time, pdMS_TO_TICKS(TASK_BUZZER_TASK_PERIOD));
+        // usart_printf("%f\n",Delay::CalculateInterval_us(s));
     }
 }

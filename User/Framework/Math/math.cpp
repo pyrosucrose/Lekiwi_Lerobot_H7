@@ -18,7 +18,7 @@
  * @note    必须处理返回值！
  * @retval  绝对值最大的元素
  */
-[[nodiscard]] float AbsMax_List(const float *list, const uint8_t len)
+[[nodiscard]] float AbsMax(const float *list, const uint8_t len)
 {
     float max = fabsf(list[0]);
     for (int i = 0; i < len; i++)
@@ -34,7 +34,7 @@
  * @note    必须处理返回值！
  * @retval  最大的元素
  */
-[[nodiscard]] float Max_List(const float *list, const uint8_t len)
+[[nodiscard]] float Max(const float *list, const uint8_t len)
 {
     float max = list[0];
     for (int i = 0; i < len; i++)
@@ -50,7 +50,7 @@
  * @note    必须处理返回值！
  * @retval  最小的元素
  */
-[[nodiscard]] float Min_List(const float *list, const uint8_t len)
+[[nodiscard]] float Min(const float *list, const uint8_t len)
 {
     float min = list[0];
     for (int i = 0; i < len; i++)

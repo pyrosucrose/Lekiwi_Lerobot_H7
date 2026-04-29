@@ -20,8 +20,7 @@
 class cRemoteData
 {
 public:
-	void RcUpdateValue(const uint8_t *rc_data);
-	void RcUpdateCounter();
+	void RcUpdateValue(const uint8_t *data);
 
 	[[nodiscard]] int16_t GetRcLeftHorizontalRaw() const { return rc_left_horizontal; }
 	[[nodiscard]] int16_t GetRcRightHorizontalRaw() const { return rc_right_horizontal; }
@@ -62,17 +61,12 @@ private:
 	float rc_left_vertical_float = 0.0f;
 	float rc_right_horizontal_float = 0.0f;
 	float rc_right_vertical_float = 0.0f;
-	int16_t rc_switch_A = HIGH;
-	int16_t rc_switch_B = HIGH;
-	int16_t rc_switch_C = HIGH;
-	int16_t rc_switch_D = HIGH;
+	int16_t rc_switch_A = eRemoteSwitchValue::HIGH;
+	int16_t rc_switch_B = eRemoteSwitchValue::HIGH;
+	int16_t rc_switch_C = eRemoteSwitchValue::HIGH;
+	int16_t rc_switch_D = eRemoteSwitchValue::HIGH;
 	int16_t rc_knob_left = 0;
 	int16_t rc_knob_right = 0;
-	int16_t rc_left_horizontal_last = 0;
-	int16_t rc_left_vertical_last = 0;
-	int16_t rc_right_horizontal_last = 0;
-	int16_t rc_right_vertical_last = 0;
-	int16_t rc_switch_C_last = HIGH;
 
 	int16_t mouse_x = 0;
 	int16_t mouse_y = 0;
@@ -94,4 +88,4 @@ private:
 	int16_t rc_online = false;
 };
 
-extern cRemoteData rc_data;
+inline cRemoteData rc_data;

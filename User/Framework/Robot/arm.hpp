@@ -27,22 +27,21 @@ public:
         {6,1412,1400,2870,false},
         }
     {}
-    void DeSolveArm() const;
+    void DeSolve() const;
     void ControlLoop();
     void TransmitBusControlCmd();
     void DisableAll();
 
     void GetDataFromRc();
-    bool SolveArm();
+    bool Solve();
     void SolveEnd();
 
     // float target_x = 110.0f, target_y = -110.0f, target_theta = -1.0f;
     float target_x = 20.0f, target_y = 45.0f, target_theta = -0.8f;
     float target_x_last = 20.0f, target_y_last = -110.0f, target_theta_last = -1.0f;
     // float target_x = 40.0f, target_y = 40.0f, target_theta = -1.0f;
-    float target_wrist = 2057, target_gripper = 1412;
+    int16_t target_wrist = 0, target_gripper = 0;
 
-    uint16_t target_pos_ecd[6] = {2048,0,0,0,2057,};
     const float l1 = 115,l2 = 135,l3 = 165;
     cMotorSts motors[6];
 };

@@ -20,7 +20,15 @@ void User_Init()
 [[noreturn]] int main()
 {
     BSP_Init();
-    while (true);
+    Buzzer::SetTone(0);
+    while (true)
+    {
+        auto s = Delay::GetTimeStamp();
+        Delay::Delay_ms(5);
+        // HAL_Delay(1);
+        // for (volatile uint32_t i = 0; i < 1000000; ++i){}
+        usart_printf("%f\n",Delay::CalculateInterval_us(s));
+    }
 }
 
 void BSP_Init()

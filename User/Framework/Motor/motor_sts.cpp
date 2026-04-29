@@ -61,7 +61,10 @@ bool cMotorSts::Is16BitWriteReg(const REG reg)
 }
 
 cMotorSts::cMotorSts(const uint8_t ID, const uint16_t zero_point, const uint16_t min_angle, const uint16_t max_angle, const bool reversed) :
-    zero_point_ecd_(zero_point), min_angle_ecd_(min_angle), max_angle_ecd_(max_angle), is_reversed_(reversed), ID_(ID)
+    zero_point_ecd_(zero_point),
+    min_pos_ecd_(min_angle), soft_min_pos_ecd_(static_cast<int16_t>(min_angle - zero_point)),
+    max_pos_ecd_(max_angle), soft_max_pos_ecd_(static_cast<int16_t>(max_angle - zero_point)),
+    is_reversed_(reversed), ID_(ID)
 {
     if (motors_count_ < MAX_MOTORS_COUNT)
     {
@@ -110,19 +113,21 @@ void cMotorSts::RxCallback(const uint8_t* data)
     {
         if (motors_[i]->ID_ == ID)
         {
-            if (data[3] + 2 < MAX_BUF_LEN)
-                memcpy(motors_[i]->rx_buffer_, &data[3], data[3] + 2);
-            else
+            if (data[3] + 2 >= MAX_BUF_LEN)
                 Crash();
+            memcpy(motors_[i]->rx_buffer_, &data[3], data[3] + 2);
+            motors_[i]->received_pack_ = true;
             return;
         }
     }
+    Buzzer::AddToNoteTrack(1000, 1000);
 }
 
 void cMotorSts::UnpackAll()
 {
     for (uint8_t i = 0; i < motors_count_; i++)
-        motors_[i]->UnpackData();
+        if (motors_[i]->received_pack_)
+            motors_[i]->UnpackData();
 }
 
 void cMotorSts::UnpackData()
@@ -134,8 +139,14 @@ void cMotorSts::UnpackData()
     {
         switch(static_cast<REG>(read_reg_l_ + cnt))
         {
-        case REG::NOW_POS_L:     pos_ecd  = PackStsData(rx_buffer_[i], rx_buffer_[i + 1]); break;
-        case REG::NOW_SPEED_L:   vel_ecd_  = PackStsData(rx_buffer_[i], rx_buffer_[i + 1]); break;
+        case REG::NOW_POS_L:
+            pos_ecd_  = PackStsData(rx_buffer_[i], rx_buffer_[i + 1]);
+            soft_pos_ecd = static_cast<int16_t>(is_reversed_ ? zero_point_ecd_ - pos_ecd_ : zero_point_ecd_ + pos_ecd_);
+            break;
+        case REG::NOW_SPEED_L:
+            vel_ecd_  = PackStsData(rx_buffer_[i], rx_buffer_[i + 1]);
+            soft_vel_ecd = static_cast<int16_t>(is_reversed_ ? -vel_ecd_ : vel_ecd_);
+            break;
         case REG::NOW_LOAD_L:    load_ecd_ = PackStsData(rx_buffer_[i], rx_buffer_[i + 1]); break;
         case REG::NOW_VOLT:      volt_ecd_ = rx_buffer_[i]; break;
         case REG::NOW_TEMP:      temp_ecd_ = rx_buffer_[i]; break;
@@ -207,6 +218,8 @@ void cMotorSts::UnpackData()
         }
     }
     read_reg_l_ = 0xFF; read_reg_h_ = 0x00;
+    received_pack_ = false;
+    callback_ready_ = true;
 }
 
 
@@ -249,11 +262,11 @@ void cMotorSts::TransmitReadCommand() const
     uint8_t idx = 0;
     uart10_tx_buffer[idx++] = 0xFF;                         // TxHeader1
     uart10_tx_buffer[idx++] = 0xFF;                         // TxHeader2
-    uart10_tx_buffer[idx++] = ID_;                           // ID
+    uart10_tx_buffer[idx++] = ID_;                          // ID
     uart10_tx_buffer[idx++] = Special::DUMMY;               // Reserved
     uart10_tx_buffer[idx++] = Command::READ;                // Command
-    uart10_tx_buffer[idx++] = read_reg_l_;                   // RegStart
-    uart10_tx_buffer[idx++] = read_reg_h_ - read_reg_l_ + 1;  // RegLength
+    uart10_tx_buffer[idx++] = read_reg_l_;                  // RegStart
+    uart10_tx_buffer[idx++] = read_reg_h_ - read_reg_l_ + 1;// RegLength
     uart10_tx_buffer[3] = idx - 3;                          // FrameLength
 
     uint8_t check_sum = 0;
@@ -273,7 +286,7 @@ void cMotorSts::TransmitWriteCommand(const REG reg, uint16_t value) const
     uint8_t idx = 0;
     uart10_tx_buffer[idx++] = 0xFF;                         // TxHeader1
     uart10_tx_buffer[idx++] = 0xFF;                         // TxHeader2
-    uart10_tx_buffer[idx++] = ID_;                           // ID
+    uart10_tx_buffer[idx++] = ID_;                          // ID
     uart10_tx_buffer[idx++] = Special::DUMMY;               // Reserved
     uart10_tx_buffer[idx++] = Command::WRITE;               // Command
     uart10_tx_buffer[idx++] = static_cast<uint8_t>(reg);    // RegStart
@@ -303,7 +316,8 @@ void cMotorSts::ControlAll()
 
     for (uint8_t i = 0; i < motors_count_; i++)
     {
-        const uint16_t val1 = ConvertStsData(motors_[i]->target_pos_);
+        if (!motors_[i]->is_param_set_) continue;
+        const uint16_t val1 = ConvertStsData(motors_[i]->target_pos_ecd_);
 
         uart10_tx_buffer[idx++] = motors_[i]->ID_;
         uart10_tx_buffer[idx++] = val1;
@@ -312,9 +326,10 @@ void cMotorSts::ControlAll()
         uart10_tx_buffer[idx++] = 0;
         uart10_tx_buffer[idx++] = 0;
 
-        const uint16_t val2 = ConvertStsData(motors_[i]->target_vel_);
+        const uint16_t val2 = ConvertStsData(motors_[i]->target_vel_ecd_);
         uart10_tx_buffer[idx++] = val2;
         uart10_tx_buffer[idx++] = val2 >> 8;
+        motors_[i]->is_param_set_ = false;
     }
     uart10_tx_buffer[3] = idx - 3;                          // FrameLength
 
@@ -341,8 +356,10 @@ void cMotorSts::ReadAll(REG start, REG end)
     uart10_tx_buffer[idx++] = end_addr - start_addr + 1;
     for (uint8_t i = 0; i < motors_count_; i++)
     {
+        if (!motors_[i]->callback_ready_) continue;
         motors_[i]->SetReadRange(start, end);
         uart10_tx_buffer[idx++] = motors_[i]->ID_;
+        motors_[i]->callback_ready_ = false;
     }
     uart10_tx_buffer[3] = idx - 3;                          // FrameLength
 

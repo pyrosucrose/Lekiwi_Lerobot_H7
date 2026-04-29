@@ -7,6 +7,13 @@
 #include <cmath>
 #include <array>
 
+/// target是否在num1和num2之间，区间会往两边扩tolerance以适配误差
+template<typename T>
+[[nodiscard]] constexpr bool IsBetween(const T target, const T num1, const T num2, const T tolerance)
+{
+    return (target >= std::min(num1, num2) - tolerance) && (target <= std::max(num1, num2) + tolerance);
+}
+
 template<std::size_t size>
 void ScaleArray(std::array<float, size>& array, float limit)
 {

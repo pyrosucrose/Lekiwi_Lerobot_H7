@@ -42,7 +42,7 @@ void cRobot::SendControl()
     }
     else
     {
-        if (rc_data.IsRcOnline() && rc_data.GetRcSwitchC() != UP)
+        if (rc_data.IsRcOnline() && rc_data.GetRcSwitchC() != eRemoteSwitchValue::HIGH)
         {
             cMotorSts::ControlAll();
         }
