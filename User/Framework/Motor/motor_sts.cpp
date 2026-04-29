@@ -21,7 +21,7 @@
  * @param   H: 高位数据(数组后)
  * @retval  拼接后数据，为int16
  */
-static int16_t PackStsData(const uint8_t L, const uint8_t H)
+int16_t cMotorSts::PackStsData(const uint8_t L, const uint8_t H)
 {
     auto s = static_cast<int16_t>(H << 8 | L);
     if ((s & 0x8000) != 0) s = static_cast<int16_t>(-(s & 0x7FFF));
@@ -31,12 +31,12 @@ static int16_t PackStsData(const uint8_t L, const uint8_t H)
 /**
  * @brief   处理STS特有的(呕)数据格式
  * @param   s: 传入的数据
- * @retval  转化为STS格式后的数据(bit15表示正负号，data & 0x7FFF是绝对值)
+ * @retval  转化为STS格式后的数据(bit15表示正负号，s & 0x7FFF是绝对值)
  * @note    通常只会对负数有影响
  * @note    虽然声明传入的是uint16，但传int16也是一样的
  * @note    想出这样处理(u)int16的家里清明节指定能多出些什么来
  */
-static uint16_t ConvertStsData(const uint16_t s)
+uint16_t cMotorSts::ConvertStsData(const uint16_t s)
 {
     return s & 0x8000 ? static_cast<uint16_t>(-(s & 0x7FFF)) : s;
 }
@@ -46,17 +46,17 @@ static uint16_t ConvertStsData(const uint16_t s)
  * @param   reg:寄存器地址
  * @retval  是不是
  */
-static bool Is16BitWriteReg(const cMotorSts::REG reg)
+bool cMotorSts::Is16BitWriteReg(const REG reg)
 {
-    return reg == cMotorSts::REG::TARGET_POSITION_L ||
-           reg == cMotorSts::REG::TARGET_SPEED_L ||
-           reg == cMotorSts::REG::MIN_ANGLE_LIMIT_L ||
-           reg == cMotorSts::REG::MAX_ANGLE_LIMIT_L ||
-           reg == cMotorSts::REG::MAX_TORQUE_L ||
-           reg == cMotorSts::REG::PROTECTION_CURRENT_L ||
-           reg == cMotorSts::REG::POSITION_CORRECTION_L ||
-           reg == cMotorSts::REG::MOVING_TIME_L ||
-           reg == cMotorSts::REG::TORQUE_LIMIT_L;
+    return reg == REG::TARGET_POSITION_L ||
+           reg == REG::TARGET_SPEED_L ||
+           reg == REG::MIN_ANGLE_LIMIT_L ||
+           reg == REG::MAX_ANGLE_LIMIT_L ||
+           reg == REG::MAX_TORQUE_L ||
+           reg == REG::PROTECTION_CURRENT_L ||
+           reg == REG::POSITION_CORRECTION_L ||
+           reg == REG::MOVING_TIME_L ||
+           reg == REG::TORQUE_LIMIT_L;
 }
 
 cMotorSts::cMotorSts(const uint8_t ID, const uint16_t zero_point, const uint16_t min_angle, const uint16_t max_angle, const bool reversed) :
@@ -91,18 +91,16 @@ void cMotorSts::RxCallback(const uint8_t* data)
 {
     if (data[0] != 0xFF || data[1] != 0xFF)
     {
-        usart_printf("1\n");
         return;   // 数据错乱不处理
     }
 
     const uint8_t param_len = data[3] - 2;
     uint8_t check_sum = 0;
-    for (uint8_t j = 2; j < param_len + 5; j++)
-        check_sum += data[j];
+    for (uint8_t i = 2; i < param_len + 5; i++)
+        check_sum += data[i];
     check_sum = ~check_sum;
     if (data[param_len + 5] != check_sum)
     {
-        usart_printf("2\n");
         return;     // 校验和不匹配不处理
     }
 
@@ -135,12 +133,12 @@ void cMotorSts::UnpackData()
     {
         switch(static_cast<REG>(read_reg_l + cnt))
         {
-        case REG::NOW_POS_L:    pos_ecd  = PackStsData(rx_buffer[i], rx_buffer[i + 1]); break;
-        case REG::NOW_SPEED_L:  vel_ecd  = PackStsData(rx_buffer[i], rx_buffer[i + 1]); break;
-        case REG::NOW_LOAD_L:   load_ecd = PackStsData(rx_buffer[i], rx_buffer[i + 1]); break;
-        case REG::NOW_VOLT:     volt_ecd = rx_buffer[i]; break;
-        case REG::NOW_TEMP:     temp_ecd = rx_buffer[i]; break;
-        case REG::NOW_CURRENT_L:cur_ecd  = PackStsData(rx_buffer[i], rx_buffer[i + 1]); break;
+        case REG::NOW_POS_L:     pos_ecd  = PackStsData(rx_buffer[i], rx_buffer[i + 1]); break;
+        case REG::NOW_SPEED_L:   vel_ecd  = PackStsData(rx_buffer[i], rx_buffer[i + 1]); break;
+        case REG::NOW_LOAD_L:    load_ecd = PackStsData(rx_buffer[i], rx_buffer[i + 1]); break;
+        case REG::NOW_VOLT:      volt_ecd = rx_buffer[i]; break;
+        case REG::NOW_TEMP:      temp_ecd = rx_buffer[i]; break;
+        case REG::NOW_CURRENT_L: cur_ecd  = PackStsData(rx_buffer[i], rx_buffer[i + 1]); break;
         default: break;
         }
 

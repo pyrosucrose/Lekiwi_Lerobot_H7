@@ -108,10 +108,14 @@ public:
     void TransmitWriteCommand(REG reg, uint16_t value) const;
     void UnpackData();
 
-    static void ControlAll();
-    static void ReadAll(REG start, REG end);
     static void RxCallback(const uint8_t* data);
     static void UnpackAll();
+    static void ControlAll();
+    static void ReadAll(REG start, REG end);
+
+    static int16_t  PackStsData(uint8_t L, uint8_t H);
+    static uint16_t ConvertStsData(uint16_t s);
+    static bool     Is16BitWriteReg(REG reg);
 
     const uint16_t zero_point_ecd;
     const uint16_t min_angle_ecd;
