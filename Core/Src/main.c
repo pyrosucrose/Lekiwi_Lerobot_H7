@@ -104,6 +104,7 @@ void MX_Main_Init()
   MX_USART10_UART_Init();
   MX_UART5_Init();
   MX_IWDG1_Init();
+  MX_TIM13_Init();
   /* USER CODE BEGIN 2 */
 #ifdef HAMUDEHABABY
   /* USER CODE END 2 */

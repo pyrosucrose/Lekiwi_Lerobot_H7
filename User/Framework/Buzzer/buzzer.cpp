@@ -47,16 +47,6 @@ namespace Buzzer
             tim.ChangeDuty(0);
         }
 
-        void SetTone(const uint16_t freq, const uint8_t duty = 50)
-        {
-            if (freq != 0)
-            {
-                tim.ChangeFreqDuty(freq, duty);
-            }
-            else
-                Mute();
-        }
-
         void UpdateOutput()
         {
             uint16_t pitch_now;
@@ -126,6 +116,16 @@ namespace Buzzer
         AddToNoteTrack(do_6, 60);
         AddToNoteTrack(mute, 300);
         tracks[0] = MusicEvent(default_config);
+    }
+
+    void SetTone(const uint16_t freq, const uint8_t duty)
+    {
+        if (freq != 0)
+        {
+            tim.ChangeFreqDuty(freq, duty);
+        }
+        else
+            Mute();
     }
 
     void SingBlock(const uint16_t pitch, const uint16_t duration_ms)

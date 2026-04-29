@@ -53,7 +53,7 @@ void cChassis::SolveWheelSpeed()
     target_wheel_speed[1] = target_speed[Z] + target_speed[X] * 0.5f - target_speed[Y] * (sqrtf(3.0f) / 2);
     target_wheel_speed[2] = target_speed[Z] + target_speed[X] * 0.5f + target_speed[Y] * (sqrtf(3.0f) / 2);
     for (uint8_t i = 0; i < 3; i++)
-        motors[i].target_vel = static_cast<uint16_t>(static_cast<int16_t>(-target_wheel_speed[i]));
+        motors[i].target_vel_ = static_cast<uint16_t>(static_cast<int16_t>(-target_wheel_speed[i]));
 }
 
 void cChassis::TransmitBusControlCmd()
@@ -69,10 +69,10 @@ void cChassis::TransmitBusControlCmd()
     // 命令
     for (const auto& motor : motors)
     {
-        uint16_t val = motor.target_vel;
+        uint16_t val = motor.target_vel_;
         if ((val & 0x8000) != 0) val = static_cast<uint16_t>(-(val & 0x7FFF));
 
-        uart10_tx_buffer[idx++] = motor.ID;
+        uart10_tx_buffer[idx++] = motor.ID_;
         uart10_tx_buffer[idx++] = val;
         uart10_tx_buffer[idx++] = val >> 8;
     }
@@ -99,7 +99,7 @@ void cChassis::DisableAll()
     // 命令
     for (const auto& motor : motors)
     {
-        uart10_tx_buffer[idx++] = motor.ID;
+        uart10_tx_buffer[idx++] = motor.ID_;
         uart10_tx_buffer[idx++] = 0;
     }
     // 校验和

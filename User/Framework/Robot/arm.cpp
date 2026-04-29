@@ -62,9 +62,9 @@ bool cArm::SolveArm()
 {
     auto Rad2Ecd = [this] (const float agl, const uint8_t i)
     {
-        return motors[i].is_reversed ?
-            static_cast<int16_t>(motors[i].zero_point_ecd - static_cast<int16_t>(agl * 4096.0 / (2 * M_PI))):
-            static_cast<int16_t>(motors[i].zero_point_ecd + static_cast<int16_t>(agl * 4096.0 / (2 * M_PI)));
+        return motors[i].is_reversed_ ?
+            static_cast<int16_t>(motors[i].zero_point_ecd_ - static_cast<int16_t>(agl * 4096.0 / (2 * M_PI))):
+            static_cast<int16_t>(motors[i].zero_point_ecd_ + static_cast<int16_t>(agl * 4096.0 / (2 * M_PI)));
     };
 
     const float X = target_x;// - l3 * cosf(target_theta);
@@ -97,18 +97,18 @@ bool cArm::SolveArm()
     const int16_t c_ecd_2 = Rad2Ecd(c2, 3);
     // usart_printf("%d,%d,%d,%d,%d,%d\n",a_ecd_1,b_ecd_1,c_ecd_1,a_ecd_2,b_ecd_2,c_ecd_2);
 
-    if (IsBetween(a_ecd_2, motors[1].min_angle_ecd, motors[1].max_angle_ecd, 10.0f) &&
-        IsBetween(b_ecd_2, motors[2].min_angle_ecd, motors[2].max_angle_ecd, 10.0f) &&
-        IsBetween(c_ecd_2, motors[3].min_angle_ecd, motors[3].max_angle_ecd, 10.0f))
+    if (IsBetween(a_ecd_2, motors[1].min_angle_ecd_, motors[1].max_angle_ecd_, 10.0f) &&
+        IsBetween(b_ecd_2, motors[2].min_angle_ecd_, motors[2].max_angle_ecd_, 10.0f) &&
+        IsBetween(c_ecd_2, motors[3].min_angle_ecd_, motors[3].max_angle_ecd_, 10.0f))
     {
         target_pos_ecd[1] = a_ecd_2;
         target_pos_ecd[2] = b_ecd_2;
         target_pos_ecd[3] = c_ecd_2;
         return true;
     }
-    if (IsBetween(a_ecd_1, motors[1].min_angle_ecd, motors[1].max_angle_ecd, 10.0f) &&
-        IsBetween(b_ecd_1, motors[2].min_angle_ecd, motors[2].max_angle_ecd, 10.0f) &&
-        IsBetween(c_ecd_1, motors[3].min_angle_ecd, motors[3].max_angle_ecd, 10.0f))
+    if (IsBetween(a_ecd_1, motors[1].min_angle_ecd_, motors[1].max_angle_ecd_, 10.0f) &&
+        IsBetween(b_ecd_1, motors[2].min_angle_ecd_, motors[2].max_angle_ecd_, 10.0f) &&
+        IsBetween(c_ecd_1, motors[3].min_angle_ecd_, motors[3].max_angle_ecd_, 10.0f))
     {
         target_pos_ecd[1] = a_ecd_1;
         target_pos_ecd[2] = b_ecd_1;
@@ -127,9 +127,9 @@ void cArm::DeSolveArm() const
 {
     auto Ecd2Rad = [this] (const int16_t ecd, const size_t i)
     {
-        return motors[i].is_reversed ?
-            static_cast<float>(static_cast<float>(motors[i].zero_point_ecd - ecd) * 2.0f * M_PI / 4096.0f) :
-            static_cast<float>(static_cast<float>(ecd - motors[i].zero_point_ecd) * 2.0f * M_PI / 4096.0f);
+        return motors[i].is_reversed_ ?
+            static_cast<float>(static_cast<float>(motors[i].zero_point_ecd_ - ecd) * 2.0f * M_PI / 4096.0f) :
+            static_cast<float>(static_cast<float>(ecd - motors[i].zero_point_ecd_) * 2.0f * M_PI / 4096.0f);
     };
 
     const float a_rad = Ecd2Rad(motors[1].pos_ecd, 1);
@@ -144,58 +144,60 @@ void cArm::DeSolveArm() const
 }
 
 void cArm::TransmitBusControlCmd()
-{   // 帧头
+{
     uint8_t idx = 0;
     uart10_tx_buffer[idx++] = 0xFF;
     uart10_tx_buffer[idx++] = 0xFF;
-    uart10_tx_buffer[idx++] = 0xFE;
-    uart10_tx_buffer[idx++] = 0x16;
-    uart10_tx_buffer[idx++] = 0x83;
+    uart10_tx_buffer[idx++] = cMotorSts::Special::MASTER_ID;
+    uart10_tx_buffer[idx++] = cMotorSts::Special::DUMMY;
+    uart10_tx_buffer[idx++] = cMotorSts::Command::SYN_WRITE;
     uart10_tx_buffer[idx++] = static_cast<uint8_t>(cMotorSts::REG::TARGET_POSITION_L);
     uart10_tx_buffer[idx++] = 0x02;
-    // 命令
+
     for (const auto& motor : motors)
     {
-        uint16_t val = motor.target_pos;
+        uint16_t val = motor.target_pos_;
         if ((val & 0x8000) != 0) val = static_cast<int16_t>(-(val & 0x7FFF));
 
-        uart10_tx_buffer[idx++] = motor.ID;
+        uart10_tx_buffer[idx++] = motor.ID_;
         uart10_tx_buffer[idx++] = val;
         uart10_tx_buffer[idx++] = val >> 8;
     }
-    // 校验和
+    uart10_tx_buffer[3] = idx - 3;                          // FrameLength
+
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < idx; i++)
         check_sum += uart10_tx_buffer[i];
     check_sum = ~check_sum;
     uart10_tx_buffer[idx++] = check_sum;
-    // 发送
+
     HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx);
 }
 
 void cArm::DisableAll()
-{   // 帧头
+{
     uint8_t idx = 0;
     uart10_tx_buffer[idx++] = 0xFF;
     uart10_tx_buffer[idx++] = 0xFF;
-    uart10_tx_buffer[idx++] = 0xFE;
-    uart10_tx_buffer[idx++] = 0x10;
-    uart10_tx_buffer[idx++] = 0x83;
+    uart10_tx_buffer[idx++] = cMotorSts::Special::MASTER_ID;
+    uart10_tx_buffer[idx++] = cMotorSts::Special::DUMMY;
+    uart10_tx_buffer[idx++] = cMotorSts::Command::SYN_WRITE;
     uart10_tx_buffer[idx++] = static_cast<uint8_t>(cMotorSts::REG::TORQUE_SWITCH);
     uart10_tx_buffer[idx++] = 0x01;
-    // 命令
+
     for (const auto& motor : motors)
     {
-        uart10_tx_buffer[idx++] = motor.ID;
+        uart10_tx_buffer[idx++] = motor.ID_;
         uart10_tx_buffer[idx++] = 2;
     }
-    // 校验和
+    uart10_tx_buffer[3] = idx - 3;                          // FrameLength
+
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < idx; i++)
         check_sum += uart10_tx_buffer[i];
-    // check_sum = ~check_sum;
+
     uart10_tx_buffer[idx++] = ~check_sum;
-    // 发送
+
     HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx);
 }
 
@@ -212,7 +214,7 @@ void cArm::ControlLoop()
         }
         SolveEnd();
         for (uint8_t i = 0; i < 6; i++)
-            motors[i].target_pos = target_pos_ecd[i];
+            motors[i].target_pos_ = target_pos_ecd[i];
         // DeSolveArm();
     }
 }

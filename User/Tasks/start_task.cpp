@@ -6,20 +6,19 @@
 #include "start_task.hpp"
 #include "FreeRTOS.h"
 #include "task.h"
-#include "cmsis_os.h"
 #include "buzzer_task.hpp"
+#include "crash.hpp"
 #include "debug_task.hpp"
 #include "iwdg.h"
 #include "remote.hpp"
 #include "robot_send_task.hpp"
 #include "robot_task.hpp"
-#include "usartio.hpp"
 
 // =============================== 宏定义区 ===============================
 
 // =============================== 变量区 ==================================
 void TASK_CreateTask(void *pv);
-void BSP_LoopTask(void *pv);
+[[noreturn]] void BSP_LoopTask(void *pv);
 
 // =============================== 函数实现 ===============================
 
@@ -38,7 +37,7 @@ void TASK_StartInit()
     xReturn = xTaskCreate((TaskFunction_t) TASK_CreateTask,
         "CreateTask",
         128,
-        (void *) nullptr,
+        nullptr,
         2,
         &task_create_handle);
     taskEXIT_CRITICAL();
@@ -89,13 +88,13 @@ void TASK_CreateTask(void *pv)
         xTaskCreate((TaskFunction_t) BSP_LoopTask,
         "BSPTask",
         128,
-        (void *) nullptr,
+        nullptr,
         1,
         &bsp_task_handle);
     taskEXIT_CRITICAL();
 
     if (xReturn != pdPASS)
-        Error_Handler();
+        Crash();
     vTaskDelete(task_create_handle);
 }
 

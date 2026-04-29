@@ -24,6 +24,24 @@ class cMotorSts
     static constexpr uint8_t MAX_BUF_LEN = 32;
     static constexpr bool DEBUG_MODE = false;
 public:
+    typedef enum : uint8_t
+    {
+        PING        = 0x01,
+        READ        = 0x02,
+        WRITE       = 0x03,
+        RESET       = 0x06,
+        ASYN_WRITE  = 0x04,
+        ASYN_ACTION = 0x05,
+        SYN_READ    = 0x82,
+        SYN_WRITE   = 0x83,
+    } Command;
+
+    typedef enum : uint8_t
+    {
+        DUMMY       = 0x00,
+        MASTER_ID   = 0xFE,
+    } Special;
+
     enum class REG : uint8_t
     {
         // EPROM
@@ -117,29 +135,29 @@ public:
     static uint16_t ConvertStsData(uint16_t s);
     static bool     Is16BitWriteReg(REG reg);
 
-    const uint16_t zero_point_ecd;
-    const uint16_t min_angle_ecd;
-    const uint16_t max_angle_ecd;
-    const bool is_reversed;
+    const uint16_t zero_point_ecd_;
+    const uint16_t min_angle_ecd_;
+    const uint16_t max_angle_ecd_;
+    const bool is_reversed_;
 
-    uint8_t ID;
-    uint8_t read_reg_l = 0xFF, read_reg_h = 0x00;
-    uint8_t write_reg_l = 0xFF, write_reg_h = 0x00;
-    uint8_t status = 0;
-    bool error = false;
-    bool enabled = false;
+    uint8_t ID_;
+    uint8_t read_reg_l_ = 0xFF, read_reg_h_ = 0x00;
+    uint8_t write_reg_l = 0xFF, write_reg_h_ = 0x00;
+    uint8_t status_ = 0;
+    bool error_ = false;
+    bool enabled_ = false;
 
     int16_t pos_ecd = 0;
-    int16_t vel_ecd = 0;
-    int16_t load_ecd = 0;
-    uint8_t volt_ecd = 0;
-    uint8_t temp_ecd = 0;
-    int16_t cur_ecd = 0;
+    int16_t vel_ecd_ = 0;
+    int16_t load_ecd_ = 0;
+    uint8_t volt_ecd_ = 0;
+    uint8_t temp_ecd_ = 0;
+    int16_t cur_ecd_ = 0;
 
-    uint16_t target_vel = 2048;
-    uint16_t target_pos = 0;
+    uint16_t target_vel_ = 2048;
+    uint16_t target_pos_ = 0;
 
-    uint8_t rx_buffer[MAX_BUF_LEN] = {};
+    uint8_t rx_buffer_[MAX_BUF_LEN] = {};
 
     static inline uint8_t motors_count_ = 0;
     static inline cMotorSts* motors_[MAX_MOTORS_COUNT];
