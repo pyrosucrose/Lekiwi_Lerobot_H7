@@ -24,5 +24,7 @@ inline constexpr uint8_t TASK_ROBOT_SEND_TASK_PERIOD = 3;
 inline constexpr uint8_t TASK_DEBUG_TASK_PERIOD      = 4;
 inline constexpr uint8_t TASK_LED_TASK_PERIOD        = 5;
 
+#define  huart_sts  huart10
+
 // =============================== 参数计算区(不得修改) ===============================
 

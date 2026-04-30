@@ -26,6 +26,7 @@ void cArm::GetDataFromRc()
         target_x = target_x_last = 20.0f;
         target_y = target_y_last = 45.0f;
         target_theta = target_theta_last = -0.8f;
+        target_yaw_ = 0.0f;
         target_wrist = 0.485f;
         return;
     }
@@ -37,6 +38,7 @@ void cArm::GetDataFromRc()
     {
         target_wrist += rc_data.GetRcRightHorizontal() * 2e-3f;
         target_wrist = Clamp(target_wrist, 0.0f, 1.0f);
+        target_yaw_ += rc_data.GetRcLeftHorizontal() * 1e-2f;
     }
 
     if (is_mode_b)
@@ -58,44 +60,6 @@ void cArm::GetDataFromRc()
     target_x = Clamp(target_x, -200, 300);
     target_y = Clamp(target_y, -200, 300);
     target_theta = Clamp(target_theta, -M_PI * 3 / 5, M_PI * 3 / 4);
-
-    // if (rc_data.GetRcSwitchC() == eRemoteSwitchValue::LOW)
-    // {
-    //     target_x = 20.0f, target_y = 45.0f, target_theta = -0.8f;
-    //     target_x_last = 20.0f, target_y_last = 45.0f, target_theta_last = -0.8f;
-    // }
-    // else
-    // {
-    //     if (rc_data.GetRcSwitchB() == eRemoteSwitchValue::LOW)
-    //     {
-    //         target_x += rc_data.GetRcLeftVertical() * 0.7f;
-    //         target_y += rc_data.GetRcRightVertical() * 0.7f;
-    //
-    //         target_wrist += rc_data.GetRcRightHorizontal() * 2e-3f;
-    //         target_wrist = Clamp(target_wrist, 0.0f, 1.0f);
-    //
-    //         target_x = Clamp(target_x, -200, 300);
-    //         target_y = Clamp(target_y, -200, 300);
-    //     }
-    //     else if (rc_data.GetRcSwitchA() == eRemoteSwitchValue::LOW)
-    //     {
-    //         target_x += rc_data.GetRcLeftVertical() * cosf(target_theta) * 0.7f; // rc_data.GetRcLeftVertical();
-    //         target_y += rc_data.GetRcLeftVertical() * sinf(target_theta) * 0.7f; // rc_data.GetRcRightVertical()
-    //         target_theta += rc_data.GetRcRightVertical() / 100.0f;
-    //
-    //         target_wrist += rc_data.GetRcRightHorizontal() * 4e-3f;
-    //         target_wrist = Clamp(target_wrist, 0.0f, 1.0f);
-    //
-    //         target_x = Clamp(target_x, -200, 300);
-    //         target_y = Clamp(target_y, -200, 300);
-    //         target_theta = Clamp(target_theta, -M_PI * 3 / 5, M_PI * 3 / 4);
-    //     }
-    //     else
-    //     {
-    //         target_theta += rc_data.GetRcRightVertical() / 100.0f;
-    //         target_theta = Clamp(target_theta, -M_PI * 3 / 5, M_PI * 3 / 4);
-    //     }
-    // }
 }
 
 bool cArm::Solve()
@@ -122,7 +86,7 @@ bool cArm::Solve()
     const float c1 = Round_v(target_theta - beta_1, 2 * M_PI);
     const float c2 = Round_v(target_theta - beta_2, 2 * M_PI);
 
-    motors[0].SetTargetPos_Rad(0);
+    motors[0].SetTargetPos_Rad(target_yaw_);
     if (motors[1].IsSafePos_Rad(a1) && motors[2].IsSafePos_Rad(b1) && motors[3].IsSafePos_Rad(c1))
     {
         motors[1].SetTargetPos_Rad(a1);
@@ -166,58 +130,58 @@ void cArm::DeSolve() const
 void cArm::TransmitBusControlCmd()
 {
     uint8_t idx = 0;
-    uart10_tx_buffer[idx++] = 0xFF;
-    uart10_tx_buffer[idx++] = 0xFF;
-    uart10_tx_buffer[idx++] = MotorSts::Special::MASTER_ID;
-    uart10_tx_buffer[idx++] = MotorSts::Special::DUMMY;
-    uart10_tx_buffer[idx++] = MotorSts::Command::SYN_WRITE;
-    uart10_tx_buffer[idx++] = static_cast<uint8_t>(MotorSts::REG::TARGET_POSITION_L);
-    uart10_tx_buffer[idx++] = 0x02;
+    uart_sts_tx_buffer[idx++] = 0xFF;
+    uart_sts_tx_buffer[idx++] = 0xFF;
+    uart_sts_tx_buffer[idx++] = MotorSts::Special::MASTER_ID;
+    uart_sts_tx_buffer[idx++] = MotorSts::Special::DUMMY;
+    uart_sts_tx_buffer[idx++] = MotorSts::Command::SYN_WRITE;
+    uart_sts_tx_buffer[idx++] = static_cast<uint8_t>(MotorSts::REG::TARGET_POSITION_L);
+    uart_sts_tx_buffer[idx++] = 0x02;
 
     for (const auto& motor : motors)
     {
         const uint16_t val = MotorSts::ConvertStsData(motor.GetHardTargetPos_Ecd());
 
-        uart10_tx_buffer[idx++] = motor.GetID();
-        uart10_tx_buffer[idx++] = val;
-        uart10_tx_buffer[idx++] = val >> 8;
+        uart_sts_tx_buffer[idx++] = motor.GetID();
+        uart_sts_tx_buffer[idx++] = val;
+        uart_sts_tx_buffer[idx++] = val >> 8;
     }
-    uart10_tx_buffer[3] = idx - 3;                          // FrameLength
+    uart_sts_tx_buffer[3] = idx - 3;                          // FrameLength
 
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < idx; i++)
-        check_sum += uart10_tx_buffer[i];
+        check_sum += uart_sts_tx_buffer[i];
     check_sum = ~check_sum;
-    uart10_tx_buffer[idx++] = check_sum;
+    uart_sts_tx_buffer[idx++] = check_sum;
 
-    HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx);
+    HAL_UART_Transmit_DMA(&huart_sts, uart_sts_tx_buffer, idx);
 }
 
 void cArm::DisableAll()
 {
     uint8_t idx = 0;
-    uart10_tx_buffer[idx++] = 0xFF;
-    uart10_tx_buffer[idx++] = 0xFF;
-    uart10_tx_buffer[idx++] = MotorSts::Special::MASTER_ID;
-    uart10_tx_buffer[idx++] = MotorSts::Special::DUMMY;
-    uart10_tx_buffer[idx++] = MotorSts::Command::SYN_WRITE;
-    uart10_tx_buffer[idx++] = static_cast<uint8_t>(MotorSts::REG::TORQUE_SWITCH);
-    uart10_tx_buffer[idx++] = 0x01;
+    uart_sts_tx_buffer[idx++] = 0xFF;
+    uart_sts_tx_buffer[idx++] = 0xFF;
+    uart_sts_tx_buffer[idx++] = MotorSts::Special::MASTER_ID;
+    uart_sts_tx_buffer[idx++] = MotorSts::Special::DUMMY;
+    uart_sts_tx_buffer[idx++] = MotorSts::Command::SYN_WRITE;
+    uart_sts_tx_buffer[idx++] = static_cast<uint8_t>(MotorSts::REG::TORQUE_SWITCH);
+    uart_sts_tx_buffer[idx++] = 0x01;
 
     for (const auto& motor : motors)
     {
-        uart10_tx_buffer[idx++] = motor.GetID();
-        uart10_tx_buffer[idx++] = 0;
+        uart_sts_tx_buffer[idx++] = motor.GetID();
+        uart_sts_tx_buffer[idx++] = 0;
     }
-    uart10_tx_buffer[3] = idx - 3;                          // FrameLength
+    uart_sts_tx_buffer[3] = idx - 3;                          // FrameLength
 
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < idx; i++)
-        check_sum += uart10_tx_buffer[i];
+        check_sum += uart_sts_tx_buffer[i];
 
-    uart10_tx_buffer[idx++] = ~check_sum;
+    uart_sts_tx_buffer[idx++] = ~check_sum;
 
-    HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx);
+    HAL_UART_Transmit_DMA(&huart_sts, uart_sts_tx_buffer, idx);
 }
 
 void cArm::ControlLoop()

@@ -21,8 +21,8 @@ uint8_t uart1_rx_buffer[UART1_RX_BUFFER_SIZE] = {};
 uint8_t uart1_tx_buffer[UART1_TX_BUFFER_SIZE] = {};
 uint8_t uart5_rx_buffer[UART5_RX_BUFFER_SIZE] = {};
 uint8_t uart5_tx_buffer[UART5_TX_BUFFER_SIZE] = {};
-uint8_t uart10_rx_buffer[UART10_RX_BUFFER_SIZE] = {};
-uint8_t uart10_tx_buffer[UART10_TX_BUFFER_SIZE] = {0xFF, 0xFF};
+uint8_t uart_sts_rx_buffer[UART_STS_RX_BUFFER_SIZE] = {};
+uint8_t uart_sts_tx_buffer[UART_STS_TX_BUFFER_SIZE] = {0xFF, 0xFF};
 
 inline constexpr uint8_t  UART_TX_BUFFER_COUNT = 32;
 inline constexpr uint16_t UART_TX_BUFFER_SIZE = 64;
@@ -42,7 +42,7 @@ uint8_t TryStartTransmit();
 void Usartio_Init()
 {
     HAL_UARTEx_ReceiveToIdle_DMA(&huart5, uart5_rx_buffer, UART5_RX_BUFFER_SIZE);
-    HAL_UARTEx_ReceiveToIdle_DMA(&huart10, uart10_rx_buffer, UART10_RX_BUFFER_SIZE);
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart10, uart_sts_rx_buffer, UART_STS_RX_BUFFER_SIZE);
     __HAL_DMA_DISABLE_IT(&hdma_uart5_rx, DMA_IT_HT);
     __HAL_DMA_DISABLE_IT(&hdma_usart10_rx, DMA_IT_HT);
 }
@@ -62,9 +62,9 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
         // auto s = Delay::GetTimeStamp();
         if (Size > 0)
         {
-            MotorSts::RxCallback(uart10_rx_buffer);
+            MotorSts::RxCallback(uart_sts_rx_buffer);
         }
-        HAL_UARTEx_ReceiveToIdle_DMA(&huart10, uart10_rx_buffer, UART10_RX_BUFFER_SIZE);
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart10, uart_sts_rx_buffer, UART_STS_RX_BUFFER_SIZE);
         // usart_printf("%f\n",Delay::CalculateInterval_us(s));
     }
 

@@ -1,5 +1,5 @@
 //
-// Created by Glucose_carbide on 25-8-8.
+// Created by Glucose_carbide on 2026-04-30.
 //
 
 // =============================== 引入头文件 ===============================
@@ -7,8 +7,8 @@
 
 #include <cstring>
 
+#include "config.hpp"
 #include "crash.hpp"
-#include "delay.hpp"
 #include "usartio.hpp"
 
 // =============================== 宏定义区 ===============================
@@ -16,104 +16,6 @@
 // =============================== 变量区 ==================================
 
 // =============================== 函数实现 ===============================
-/**
- * @brief   拼接返回数据
- * @param   L: 低位数据(数组前)
- * @param   H: 高位数据(数组后)
- * @retval  拼接后数据，为int16
- */
-int16_t MotorSts::PackStsData(const uint8_t L, const uint8_t H)
-{
-    auto s = static_cast<int16_t>(H << 8 | L);
-    if ((s & 0x8000) != 0) s = static_cast<int16_t>(-(s & 0x7FFF));
-    return s;
-}
-
-/**
- * @brief   处理STS特有的(呕)数据格式
- * @param   s: 传入的数据
- * @retval  转化为STS格式后的数据(bit15表示正负号，s & 0x7FFF是绝对值)
- * @note    通常只会对负数有影响
- * @note    虽然声明传入的是uint16，但传int16也是一样的
- * @note    想出这样处理(u)int16的家里清明节指定能多出些什么来
- */
-uint16_t MotorSts::ConvertStsData(const uint16_t s)
-{
-    return s & 0x8000 ? static_cast<uint16_t>(-(s & 0x7FFF)) : s;
-}
-
-/**
- * @brief   表示传入的寄存器地址是否是某个16bit数据的低位寄存器
- * @param   reg:寄存器地址
- * @retval  是不是
- */
-bool MotorSts::IsLowByteRegister(const REG reg)
-{
-    return reg == REG::TARGET_POSITION_L ||
-           reg == REG::TARGET_SPEED_L ||
-           reg == REG::MIN_ANGLE_LIMIT_L ||
-           reg == REG::MAX_ANGLE_LIMIT_L ||
-           reg == REG::MAX_TORQUE_L ||
-           reg == REG::PROTECTION_CURRENT_L ||
-           reg == REG::POSITION_CORRECTION_L ||
-           reg == REG::MOVING_TIME_L ||
-           reg == REG::TORQUE_LIMIT_L;
-}
-
-/**
- * @brief   电机的构造函数
- * @details 新建电机后会将其添加至静态数组中以便批量操作
- * @param   ID          :该电机ID
- * @param   zero_point  :电机零点(用户希望电机所在的零点)
- * @param   min_angle   :电机所有允许的姿态下，编码器最小值
- * @param   max_angle   :电机所有允许的姿态下，编码器最大值
- * @param   reversed    :是否反转，和安装方式相关(若用户期望的电机方向和点击实际方向相反就设为true)
- * @note    若从这进了Crash那可能是电机ID冲突或是注册的电机过多导致超出MAX_MOTORS_COUNT，需要修正或修改相关配置
- * @warning 对于重复ID的处理能力有限，用户必须保证没用重复ID的电机被写入！
- */
-MotorSts::MotorSts(const uint8_t ID, const uint16_t zero_point, const uint16_t min_angle, const uint16_t max_angle, const bool reversed) :
-    ID_(ID), is_reversed_(reversed), zero_point_ecd_(zero_point),
-    min_pos_ecd_(min_angle), soft_min_pos_ecd_(static_cast<int16_t>(min_angle - zero_point)),
-    max_pos_ecd_(max_angle), soft_max_pos_ecd_(static_cast<int16_t>(max_angle - zero_point))
-{
-    if (motors_count_ < MAX_MOTORS_COUNT)
-    {
-        motors_[motors_count_] = this;
-        if (motors_idx_[ID] != 0x00 && motors_idx_[ID] != Special::ILLEGAL_ID)  // 没辙，否则idx_必须手动写255个0xFF进去
-            Crash();
-        motors_idx_[ID] = motors_count_;
-        motors_count_++;
-    }
-    else
-    {
-        Crash();
-    }
-}
-
-/**
- * @brief   电机的析构函数
- * @details 会查找静态电机列表找到当前电机，随后在idx_与motors_中注销该电机并且用最后一个电机覆盖
- * @note    若从这进了Crash那大概率是代码逻辑问题，还请及时汇报，感激不尽！
- */
-MotorSts::~MotorSts()
-{
-    for (uint8_t i = 0; i < motors_count_; i++)
-    {
-        if (motors_[i] == this)
-        {
-            motors_idx_[motors_[motors_count_ - 1]->ID_] = i;
-            motors_idx_[ID_] = Special::ILLEGAL_ID;
-
-            motors_[i] = motors_[motors_count_ - 1]; // 用最后一个覆盖
-            motors_[motors_count_ - 1] = nullptr;
-
-            motors_count_--;
-            return;
-        }
-    }
-    Crash();
-}
-
 /**
  * @brief   电机的中断回调处理函数
  * @details 该函数会先比对数据格式的正确性，并且将有用数据拷贝进电机的rx_buffer_中
@@ -124,40 +26,25 @@ MotorSts::~MotorSts()
  */
 void MotorSts::RxCallback(const uint8_t* data)
 {
-    if (data[0] != 0xFF || data[1] != 0xFF)
-    {
-        return;   // 数据错乱不处理
-    }
+    if (data[0] != 0xFF || data[1] != 0xFF) return;   // 数据错乱不处理
 
     const uint8_t param_len = data[3] - 2;
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < param_len + 5; i++)
         check_sum += data[i];
     check_sum = ~check_sum;
-    if (data[param_len + 5] != check_sum)
-    {
-        return;     // 校验和不匹配不处理
-    }
-
-    // const uint8_t ID = data[2];
-    // for (uint8_t i = 0; i < motors_count_; i++)
-    // {
-    //     if (motors_[i]->ID_ == ID)
-    //     {
-    //         if (data[3] + 2 >= MAX_BUF_LEN)
-    //             Crash();
-    //         memcpy(motors_[i]->rx_buffer_, &data[3], data[3] + 2);
-    //         motors_[i]->received_pack_ = true;
-    //         return;
-    //     }
-    // }
+    if (data[param_len + 5] != check_sum) return;     // 校验和不匹配不处理
 
     if (const uint8_t ID = data[2]; motors_[motors_idx_[ID]])
     {
-        if (data[3] + 2 >= MAX_BUF_LEN)
+        if (data[3] >= MAX_BUF_LEN)
             Crash();
-        memcpy(motors_[motors_idx_[ID]]->rx_buffer_, &data[3], data[3] + 2);
-        motors_[motors_idx_[ID]]->received_pack_ = true;
+        if (param_len)
+        {
+            motors_[motors_idx_[ID]]->received_pack_ = true;        // 但仍需将标志位置1防止死锁 ↓
+            if (motors_[motors_idx_[ID]]->is_unpacking_) return;    // 若处理回调时则不拷贝防止数据错乱
+            memcpy(motors_[motors_idx_[ID]]->rx_buffer_, &data[3], data[3]);
+        }
         return;
     }
     Crash();
@@ -167,7 +54,6 @@ void MotorSts::RxCallback(const uint8_t* data)
  * @brief   解析所有电机的数据
  * @details 对于有新数据返回的电机，调用UnpackData来解析
  * @note    该函数应该在主循环或任务中由用户手动调用
- * @todo    目前似乎没有对解析时新数据传入的保护
  */
 void MotorSts::UnpackAll()
 {
@@ -183,6 +69,7 @@ void MotorSts::UnpackAll()
  */
 void MotorSts::UnpackData()
 {
+    is_unpacking_ = true;
     status_ = rx_buffer_[1]; error_ = status_;  // 错误码处理
 
     const uint8_t param_len = rx_buffer_[0] - 2;
@@ -278,7 +165,8 @@ void MotorSts::UnpackData()
     }
     read_reg_l_ = 0xFF; read_reg_h_ = 0x00;
     received_pack_ = false;
-    callback_ready_ = true;
+    in_use_ = false;
+    is_unpacking_ = false;
 }
 
 
@@ -289,145 +177,148 @@ void MotorSts::AddReadReg(const REG reg)
     if (addr > read_reg_h_) read_reg_h_ = addr;
 }
 
-void MotorSts::AddReadRangeByCount(const REG start, const uint8_t count)
+void MotorSts::AddReadRangeByCount(const REG s, const uint8_t c)
 {
-    if (count == 0) return;
+    if (c == 0) return;
 
-    const auto start_addr = static_cast<uint8_t>(start);
-    const uint8_t end_addr = start_addr + count - 1;
-    if (start_addr < read_reg_l_) read_reg_l_ = start_addr;
-    if (end_addr   > read_reg_h_) read_reg_h_ = end_addr;
+    const auto start = static_cast<uint8_t>(s);
+    const uint8_t end = start + c - 1;
+    if (start < read_reg_l_) read_reg_l_ = start;
+    if (end   > read_reg_h_) read_reg_h_ = end;
 }
 
-void MotorSts::AddReadRange(const REG start, const REG end)
+void MotorSts::AddReadRange(const REG s, const REG e)
 {
-    const auto start_addr = static_cast<uint8_t>(start);
-    const auto end_addr = static_cast<uint8_t>(end);
-    if (start_addr > end_addr) return;
-    if (start_addr < read_reg_l_) read_reg_l_ = start_addr;
-    if (end_addr   > read_reg_h_) read_reg_h_ = end_addr;
+    const auto start = static_cast<uint8_t>(s);
+    const auto end = static_cast<uint8_t>(e);
+    if (start > end) return;
+    if (start < read_reg_l_) read_reg_l_ = start;
+    if (end   > read_reg_h_) read_reg_h_ = end;
 }
 
-void MotorSts::SetReadRange(REG start, REG end)
+void MotorSts::SetReadRange(REG s, REG e)
 {
-    read_reg_l_ =  static_cast<uint8_t>(start);
-    read_reg_h_ =  static_cast<uint8_t>(end);
+    read_reg_l_ =  static_cast<uint8_t>(s);
+    read_reg_h_ =  static_cast<uint8_t>(e);
 }
 
-void MotorSts::TransmitReadCommand() const
+void MotorSts::TransmitReadCommand()
 {
     if (read_reg_h_ < read_reg_l_) return;
 
     uint8_t idx = 0;
-    uart10_tx_buffer[idx++] = 0xFF;                         // TxHeader1
-    uart10_tx_buffer[idx++] = 0xFF;                         // TxHeader2
-    uart10_tx_buffer[idx++] = ID_;                          // ID
-    uart10_tx_buffer[idx++] = Special::DUMMY;               // Reserved
-    uart10_tx_buffer[idx++] = Command::READ;                // Command
-    uart10_tx_buffer[idx++] = read_reg_l_;                  // RegStart
-    uart10_tx_buffer[idx++] = read_reg_h_ - read_reg_l_ + 1;// RegLength
-    uart10_tx_buffer[3] = idx - 3;                          // FrameLength
+    uart_sts_tx_buffer[idx++] = 0xFF;                         // TxHeader1
+    uart_sts_tx_buffer[idx++] = 0xFF;                         // TxHeader2
+    uart_sts_tx_buffer[idx++] = ID_;                          // ID
+    uart_sts_tx_buffer[idx++] = Special::DUMMY;               // Reserved
+    uart_sts_tx_buffer[idx++] = Command::READ;                // Command
+    uart_sts_tx_buffer[idx++] = read_reg_l_;                  // RegStart
+    uart_sts_tx_buffer[idx++] = read_reg_h_ - read_reg_l_ + 1;// RegLength
+    uart_sts_tx_buffer[3] = idx - 3;                          // FrameLength
 
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < idx; i++)
-        check_sum += uart10_tx_buffer[i];
-    uart10_tx_buffer[idx++] = ~check_sum;                   // CheckSum
+        check_sum += uart_sts_tx_buffer[i];
+    uart_sts_tx_buffer[idx++] = ~check_sum;                   // CheckSum
 
-    HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx);
+    if (HAL_UART_Transmit_DMA(&huart_sts, uart_sts_tx_buffer, idx) == HAL_OK)
+        in_use_ = true;
 }
 
-void MotorSts::TransmitWriteCommand(const REG reg, uint16_t value) const
+void MotorSts::TransmitWriteCommand(const REG reg, uint16_t val) const
 {
     const auto is_16_bit_reg = IsLowByteRegister(reg);
-    if (!is_16_bit_reg && (value & 0xFF00) != 0) Crash();    // 传参错误直接报错
-    value = ConvertStsData(value);
+    if (!is_16_bit_reg && (val & 0xFF00) != 0) Crash();    // 传参错误直接报错
+    val = ConvertStsData(val);
 
     uint8_t idx = 0;
-    uart10_tx_buffer[idx++] = 0xFF;                         // TxHeader1
-    uart10_tx_buffer[idx++] = 0xFF;                         // TxHeader2
-    uart10_tx_buffer[idx++] = ID_;                          // ID
-    uart10_tx_buffer[idx++] = Special::DUMMY;               // Reserved
-    uart10_tx_buffer[idx++] = Command::WRITE;               // Command
-    uart10_tx_buffer[idx++] = static_cast<uint8_t>(reg);    // RegStart
-    uart10_tx_buffer[idx++] = value;                        // SetValue
+    uart_sts_tx_buffer[idx++] = 0xFF;                         // TxHeader1
+    uart_sts_tx_buffer[idx++] = 0xFF;                         // TxHeader2
+    uart_sts_tx_buffer[idx++] = ID_;                          // ID
+    uart_sts_tx_buffer[idx++] = Special::DUMMY;               // Reserved
+    uart_sts_tx_buffer[idx++] = Command::WRITE;               // Command
+    uart_sts_tx_buffer[idx++] = static_cast<uint8_t>(reg);    // RegStart
+    uart_sts_tx_buffer[idx++] = val;                        // SetValue
     if (is_16_bit_reg)
-        uart10_tx_buffer[idx++] = value >> 8;
-    uart10_tx_buffer[3] = idx - 3;                          // FrameLength
+        uart_sts_tx_buffer[idx++] = val >> 8;
+    uart_sts_tx_buffer[3] = idx - 3;                          // FrameLength
 
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < idx; i++)
-        check_sum += uart10_tx_buffer[i];
-    uart10_tx_buffer[idx++] = ~check_sum;
+        check_sum += uart_sts_tx_buffer[i];
+    uart_sts_tx_buffer[idx++] = ~check_sum;
 
-    HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx);
+    HAL_UART_Transmit_DMA(&huart_sts, uart_sts_tx_buffer, idx);
 }
 
 void MotorSts::ControlAll()
 {
     uint8_t idx = 0;
-    uart10_tx_buffer[idx++] = 0xFF;
-    uart10_tx_buffer[idx++] = 0xFF;
-    uart10_tx_buffer[idx++] = Special::MASTER_ID;
-    uart10_tx_buffer[idx++] = Special::DUMMY; // Reserved
-    uart10_tx_buffer[idx++] = Command::SYN_WRITE;
-    uart10_tx_buffer[idx++] = static_cast<uint8_t>(REG::TARGET_POSITION_L);
-    uart10_tx_buffer[idx++] = 0x06;
+    uart_sts_tx_buffer[idx++] = 0xFF;
+    uart_sts_tx_buffer[idx++] = 0xFF;
+    uart_sts_tx_buffer[idx++] = Special::MASTER_ID;
+    uart_sts_tx_buffer[idx++] = Special::DUMMY; // Reserved
+    uart_sts_tx_buffer[idx++] = Command::SYN_WRITE;
+    uart_sts_tx_buffer[idx++] = static_cast<uint8_t>(REG::TARGET_POSITION_L);
+    uart_sts_tx_buffer[idx++] = 0x06;
 
     for (uint8_t i = 0; i < motors_count_; i++)
     {
         if (!motors_[i]->is_param_set_) continue;
         const uint16_t val1 = ConvertStsData(motors_[i]->target_pos_ecd_);
 
-        uart10_tx_buffer[idx++] = motors_[i]->ID_;
-        uart10_tx_buffer[idx++] = val1;
-        uart10_tx_buffer[idx++] = val1 >> 8;
+        uart_sts_tx_buffer[idx++] = motors_[i]->ID_;
+        uart_sts_tx_buffer[idx++] = val1;
+        uart_sts_tx_buffer[idx++] = val1 >> 8;
 
-        uart10_tx_buffer[idx++] = 0;
-        uart10_tx_buffer[idx++] = 0;
+        uart_sts_tx_buffer[idx++] = 0;
+        uart_sts_tx_buffer[idx++] = 0;
 
         const uint16_t val2 = ConvertStsData(motors_[i]->target_vel_ecd_);
-        uart10_tx_buffer[idx++] = val2;
-        uart10_tx_buffer[idx++] = val2 >> 8;
-        motors_[i]->is_param_set_ = false;
+        uart_sts_tx_buffer[idx++] = val2;
+        uart_sts_tx_buffer[idx++] = val2 >> 8;
     }
-    uart10_tx_buffer[3] = idx - 3;                          // FrameLength
+    uart_sts_tx_buffer[3] = idx - 3;                          // FrameLength
 
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < idx; i++)
-        check_sum += uart10_tx_buffer[i];
-    uart10_tx_buffer[idx++] = ~check_sum;
+        check_sum += uart_sts_tx_buffer[i];
+    uart_sts_tx_buffer[idx++] = ~check_sum;
 
-    HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx);
+    if (HAL_UART_Transmit_DMA(&huart_sts, uart_sts_tx_buffer, idx) == HAL_OK)
+        for (uint8_t i = 0; i < motors_count_; i++)
+            motors_[i]->is_param_set_ = false;
 }
 
-void MotorSts::ReadAll(REG start, REG end)
+void MotorSts::ReadAll(REG s, REG e)
 {
-    const auto start_addr = static_cast<uint8_t>(start);
-    const auto end_addr = static_cast<uint8_t>(end);
+    const auto start_addr = static_cast<uint8_t>(s);
+    const auto end_addr = static_cast<uint8_t>(e);
     if (start_addr > end_addr) return;
     uint8_t idx = 0;
-    uart10_tx_buffer[idx++] = 0xFF;
-    uart10_tx_buffer[idx++] = 0xFF;
-    uart10_tx_buffer[idx++] = Special::MASTER_ID;
-    uart10_tx_buffer[idx++] = Special::DUMMY; // Reserved
-    uart10_tx_buffer[idx++] = Command::SYN_READ;
-    uart10_tx_buffer[idx++] = start_addr;
-    uart10_tx_buffer[idx++] = end_addr - start_addr + 1;
+    uart_sts_tx_buffer[idx++] = 0xFF;
+    uart_sts_tx_buffer[idx++] = 0xFF;
+    uart_sts_tx_buffer[idx++] = Special::MASTER_ID;
+    uart_sts_tx_buffer[idx++] = Special::DUMMY; // Reserved
+    uart_sts_tx_buffer[idx++] = Command::SYN_READ;
+    uart_sts_tx_buffer[idx++] = start_addr;
+    uart_sts_tx_buffer[idx++] = end_addr - start_addr + 1;
     for (uint8_t i = 0; i < motors_count_; i++)
     {
-        if (!motors_[i]->callback_ready_) continue;
-        motors_[i]->SetReadRange(start, end);
-        uart10_tx_buffer[idx++] = motors_[i]->ID_;
-        motors_[i]->callback_ready_ = false;
+        if (motors_[i]->in_use_) continue;
+        motors_[i]->SetReadRange(s, e);
+        uart_sts_tx_buffer[idx++] = motors_[i]->ID_;
     }
-    uart10_tx_buffer[3] = idx - 3;                          // FrameLength
+    uart_sts_tx_buffer[3] = idx - 3;                          // FrameLength
 
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < idx; i++)
-        check_sum += uart10_tx_buffer[i];
-    uart10_tx_buffer[idx++] = ~check_sum;
+        check_sum += uart_sts_tx_buffer[i];
+    uart_sts_tx_buffer[idx++] = ~check_sum;
 
-    HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx);
+    if (HAL_UART_Transmit_DMA(&huart_sts, uart_sts_tx_buffer, idx) == HAL_OK)
+        for (uint8_t i = 0; i < motors_count_; i++)
+            motors_[i]->in_use_ = true;
 }
 
 void MotorSts::Init()

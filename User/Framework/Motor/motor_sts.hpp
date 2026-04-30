@@ -124,17 +124,17 @@ public:
     ~MotorSts();
 
     void AddReadReg(REG reg);
-    void AddReadRangeByCount(REG start, uint8_t count);
-    void AddReadRange(REG start, REG end);
-    void SetReadRange(REG start, REG end);
-    void TransmitReadCommand() const;
-    void TransmitWriteCommand(REG reg, uint16_t value) const;
+    void AddReadRangeByCount(REG s, uint8_t c);
+    void AddReadRange(REG s, REG e);
+    void SetReadRange(REG s, REG e);
+    void TransmitReadCommand();
+    void TransmitWriteCommand(REG reg, uint16_t val) const;
     void UnpackData();
 
     static void RxCallback(const uint8_t* data);
     static void UnpackAll();
     static void ControlAll();
-    static void ReadAll(REG start, REG end);
+    static void ReadAll(REG s, REG e);
     static void Init();
 
     void SetTargetPos_Ecd(const int16_t t) { soft_target_pos_ecd_ = t; target_pos_ecd_ = is_reversed_ ? zero_point_ecd_ - t : zero_point_ecd_ + t; is_param_set_ = true; }
@@ -182,7 +182,6 @@ public:
     uint16_t min_pos_ecd_;  int16_t soft_min_pos_ecd_;
     uint16_t max_pos_ecd_;  int16_t soft_max_pos_ecd_;
 
-    uint8_t status_ = 0;
     uint16_t pos_ecd_ = 0;  int16_t soft_pos_ecd = 0;
     uint16_t vel_ecd_ = 0;  int16_t soft_vel_ecd = 0;
     int16_t load_ecd_ = 0;
@@ -190,20 +189,21 @@ public:
     uint8_t temp_ecd_ = 0;
     int16_t cur_ecd_ = 0;
 
-    uint16_t target_vel_ecd_ = 2048;    int16_t soft_target_vel_ecd_ = 2048;
+    uint16_t target_vel_ecd_ = 32767;    int16_t soft_target_vel_ecd_ = 32767;
     uint16_t target_pos_ecd_ = 0;       int16_t soft_target_pos_ecd_ = 0;
 
     uint8_t read_reg_l_ = 0xFF, read_reg_h_ = 0x00;
     uint8_t write_reg_l = 0xFF, write_reg_h_ = 0x00;
+    uint8_t status_ = 0;
     bool error_ = false;
     bool is_param_set_ = false;
     bool received_pack_ = false;
-    bool callback_ready_ = true;
+    bool in_use_ = false;
+    bool is_unpacking_ = false;     // 开始解包时置为true来屏蔽中断回调写入数据
 
     uint8_t rx_buffer_[MAX_BUF_LEN] = {};
 
     static inline uint8_t motors_count_ = 0;
-    static inline MotorSts* motors_[MAX_MOTORS_COUNT];
+    static inline MotorSts* motors_[MAX_MOTORS_COUNT] = {};
     static inline uint8_t motors_idx_[MAX_MOTOR_ID + 1] = {};
 };
-
