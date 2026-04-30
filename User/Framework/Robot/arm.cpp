@@ -79,18 +79,6 @@ bool cArm::Solve()
     const float c1 = Round_v(target_theta - beta_1, 2 * M_PI);
     const float c2 = Round_v(target_theta - beta_2, 2 * M_PI);
 
-    // const int16_t a_ecd_1 = Rad2Ecd(a1, 1);
-    // const int16_t a_ecd_2 = Rad2Ecd(a2, 1);
-    // const int16_t b_ecd_1 = Rad2Ecd(b1, 2);
-    // const int16_t b_ecd_2 = Rad2Ecd(b2, 2);
-    // const int16_t c_ecd_1 = Rad2Ecd(c1, 3);
-    // const int16_t c_ecd_2 = Rad2Ecd(c2, 3);
-    // usart_printf("%d,%d,%d,%d,%d,%d\n",a_ecd_1,b_ecd_1,c_ecd_1,a_ecd_2,b_ecd_2,c_ecd_2);
-
-    // if (IsBetween(a_ecd_2, motors[1].min_pos_ecd_, motors[1].max_pos_ecd_, 10.0f) &&
-    //     IsBetween(b_ecd_2, motors[2].min_pos_ecd_, motors[2].max_pos_ecd_, 10.0f) &&
-    //     IsBetween(c_ecd_2, motors[3].min_pos_ecd_, motors[3].max_pos_ecd_, 10.0f))
-    // {
     if (motors[1].IsSafePos_Rad(a1) && motors[2].IsSafePos_Rad(b1) && motors[3].IsSafePos_Rad(c1))
     {
         motors[1].SetTargetPos_Rad(a1);
@@ -100,10 +88,6 @@ bool cArm::Solve()
         motors[5].SetTargetPos_Ecd(target_gripper);
         return true;
     }
-    // if (IsBetween(a_ecd_1, motors[1].min_pos_ecd_, motors[1].max_pos_ecd_, 10.0f) &&
-    //     IsBetween(b_ecd_1, motors[2].min_pos_ecd_, motors[2].max_pos_ecd_, 10.0f) &&
-    //     IsBetween(c_ecd_1, motors[3].min_pos_ecd_, motors[3].max_pos_ecd_, 10.0f))
-    // {
     if (motors[1].IsSafePos_Rad(a2) && motors[2].IsSafePos_Rad(b2) && motors[3].IsSafePos_Rad(c2))
     {
         motors[1].SetTargetPos_Rad(a2);
@@ -204,8 +188,6 @@ void cArm::ControlLoop()
             target_theta = target_theta_last;
         }
         SolveEnd();
-        // for (uint8_t i = 0; i < 6; i++)
-        //     motors[i].target_pos_ecd_ = target_pos_ecd[i];
         DeSolve();
     }
 }

@@ -47,7 +47,7 @@ uint16_t cMotorSts::ConvertStsData(const uint16_t s)
  * @param   reg:寄存器地址
  * @retval  是不是
  */
-bool cMotorSts::Is16BitWriteReg(const REG reg)
+bool cMotorSts::IsLowByteRegister(const REG reg)
 {
     return reg == REG::TARGET_POSITION_L ||
            reg == REG::TARGET_SPEED_L ||
@@ -69,6 +69,7 @@ cMotorSts::cMotorSts(const uint8_t ID, const uint16_t zero_point, const uint16_t
     if (motors_count_ < MAX_MOTORS_COUNT)
     {
         motors_[motors_count_++] = this;
+        motors_idx_[ID] = motors_count_;
     }
     else
     {
@@ -82,8 +83,12 @@ cMotorSts::~cMotorSts()
     {
         if (motors_[i] == this)
         {
+            motors_idx_[motors_[motors_count_ - 1]->ID_] = i;
+            motors_idx_[ID_] = Special::ILLEGAL_ID;
+
             motors_[i] = motors_[motors_count_ - 1]; // 用最后一个覆盖
             motors_[motors_count_ - 1] = nullptr;
+
             motors_count_--;
             return;
         }
@@ -108,19 +113,28 @@ void cMotorSts::RxCallback(const uint8_t* data)
         return;     // 校验和不匹配不处理
     }
 
-    const uint8_t ID = data[2];
-    for (uint8_t i = 0; i < motors_count_; i++)
+    // const uint8_t ID = data[2];
+    // for (uint8_t i = 0; i < motors_count_; i++)
+    // {
+    //     if (motors_[i]->ID_ == ID)
+    //     {
+    //         if (data[3] + 2 >= MAX_BUF_LEN)
+    //             Crash();
+    //         memcpy(motors_[i]->rx_buffer_, &data[3], data[3] + 2);
+    //         motors_[i]->received_pack_ = true;
+    //         return;
+    //     }
+    // }
+
+    if (const uint8_t ID = data[2]; motors_[motors_idx_[ID]])
     {
-        if (motors_[i]->ID_ == ID)
-        {
-            if (data[3] + 2 >= MAX_BUF_LEN)
-                Crash();
-            memcpy(motors_[i]->rx_buffer_, &data[3], data[3] + 2);
-            motors_[i]->received_pack_ = true;
-            return;
-        }
+        if (data[3] + 2 >= MAX_BUF_LEN)
+            Crash();
+        memcpy(motors_[motors_idx_[ID]]->rx_buffer_, &data[3], data[3] + 2);
+        motors_[motors_idx_[ID]]->received_pack_ = true;
+        return;
     }
-    Buzzer::AddToNoteTrack(1000, 1000);
+    Crash();
 }
 
 void cMotorSts::UnpackAll()
@@ -279,8 +293,8 @@ void cMotorSts::TransmitReadCommand() const
 
 void cMotorSts::TransmitWriteCommand(const REG reg, uint16_t value) const
 {
-    const auto is_16_bit_reg = Is16BitWriteReg(reg);
-    if (!is_16_bit_reg && (value & 0xFF00) != 0) return;    // 传参错误不处理
+    const auto is_16_bit_reg = IsLowByteRegister(reg);
+    if (!is_16_bit_reg && (value & 0xFF00) != 0) Crash();    // 传参错误直接报错
     value = ConvertStsData(value);
 
     uint8_t idx = 0;
