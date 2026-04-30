@@ -132,7 +132,7 @@ void cArm::TransmitBusControlCmd()
 
     for (const auto& motor : motors)
     {
-        const uint16_t val = cMotorSts::ConvertStsData(motor.GetTargetPos_Ecd());
+        const uint16_t val = cMotorSts::ConvertStsData(motor.GetHardTargetPos_Ecd());
 
         uart10_tx_buffer[idx++] = motor.GetID();
         uart10_tx_buffer[idx++] = val;

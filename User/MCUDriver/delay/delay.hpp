@@ -58,8 +58,8 @@ namespace Delay
     {
         while (ms > MAX_SAFE_MS)
         {
-            Delay_us(MAX_SAFE_MS * 1000);
             ms -= MAX_SAFE_MS;
+            Delay_us(MAX_SAFE_MS * 1000);
         }
         Delay_us(ms * 1000);
     }

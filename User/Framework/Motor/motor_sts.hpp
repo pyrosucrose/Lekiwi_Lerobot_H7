@@ -137,36 +137,43 @@ public:
     static void ReadAll(REG start, REG end);
 
     void SetTargetPos_Ecd(const int16_t t) { soft_target_pos_ecd_ = t; target_pos_ecd_ = is_reversed_ ? zero_point_ecd_ - t : zero_point_ecd_ + t; is_param_set_ = true; }
-    void SetTargetPos_Rad(const float t)   { SetTargetPos_Ecd(Rad2Encoder(t)); }
+    void SetTargetPos_Rad(const float t)   { SetTargetPos_Ecd(Rad2Ecd(t)); }
+    void SetTargetPos_One(const float t)   { SetTargetPos_Ecd(One2Ecd(t)); }
     void SetTargetVel_Ecd(const int16_t t) { soft_target_vel_ecd_ = t; target_vel_ecd_ = is_reversed_ ? -t : t; is_param_set_ = true; }
-    void SetTargetVel_Rad(const float t)   { SetTargetVel_Ecd(Rad2Encoder(t)); }
+    void SetTargetVel_Rad(const float t)   { SetTargetVel_Ecd(Rad2Ecd(t)); }
 
     [[nodiscard]] bool IsSafePos_Ecd(const int16_t p) const { return IsBetween(static_cast<int16_t>(is_reversed_ ? -p : p), soft_min_pos_ecd_, soft_max_pos_ecd_, static_cast<int16_t>(10)); }
-    [[nodiscard]] bool IsSafePos_Rad(const float p)   const { return IsSafePos_Ecd(Rad2Encoder(p)); }
+    [[nodiscard]] bool IsSafePos_Rad(const float p)   const { return IsSafePos_Ecd(Rad2Ecd(p)); }
 
     [[nodiscard]] bool IsReversed() const { return is_reversed_; }
     [[nodiscard]] uint8_t GetID() const { return ID_; }
 
-    [[nodiscard]] uint16_t GetTargetVel_Ecd()     const { return target_vel_ecd_; }
+    [[nodiscard]] uint16_t GetHardTargetVel_Ecd() const { return target_vel_ecd_; }
+    [[nodiscard]] uint16_t GetHardTargetPos_Ecd() const { return target_pos_ecd_; }
+    [[nodiscard]] uint16_t GetHardPos_Raw()       const { return pos_ecd_; }
+    [[nodiscard]] uint16_t GetHardVel_Raw()       const { return vel_ecd_; }
+
     [[nodiscard]] int16_t  GetSoftTargetVel_Ecd() const { return soft_target_vel_ecd_; }
-    [[nodiscard]] float    GetSoftTargetVel_Rad() const { return Encoder2Rad(GetSoftTargetVel_Ecd()); }
-    [[nodiscard]] uint16_t GetTargetPos_Ecd()     const { return target_pos_ecd_; }
+    [[nodiscard]] float    GetSoftTargetVel_Rad() const { return Ecd2Rad(GetSoftTargetVel_Ecd()); }
     [[nodiscard]] int16_t  GetSoftTargetPos_Ecd() const { return soft_target_pos_ecd_; }
-    [[nodiscard]] float    GetSoftTargetPos_Rad() const { return Encoder2Rad(GetSoftTargetPos_Ecd()); }
-    [[nodiscard]] uint16_t GetPos_Raw()           const { return pos_ecd_; }
-    [[nodiscard]] int16_t  GetSoftPos_Ecd()       const { return soft_pos_ecd; }
-    [[nodiscard]] float    GetSoftPos_Rad()       const { return Encoder2Rad(GetSoftPos_Ecd()); }
-    [[nodiscard]] uint16_t GetVel_Raw()           const { return vel_ecd_; }
+    [[nodiscard]] float    GetSoftTargetPos_Rad() const { return Ecd2Rad(GetSoftTargetPos_Ecd()); }
+    [[nodiscard]] float    GetSoftTargetPos_One() const { return Ecd2One(GetSoftTargetPos_Ecd()); }
     [[nodiscard]] int16_t  GetSoftVel_Ecd()       const { return soft_vel_ecd; }
-    [[nodiscard]] float    GetSoftVel_Rad()       const { return Encoder2Rad(GetSoftVel_Ecd()); }
+    [[nodiscard]] float    GetSoftVel_Rad()       const { return Ecd2Rad(GetSoftVel_Ecd()); }
+    [[nodiscard]] int16_t  GetSoftPos_Ecd()       const { return soft_pos_ecd; }
+    [[nodiscard]] float    GetSoftPos_Rad()       const { return Ecd2Rad(GetSoftPos_Ecd()); }
+    [[nodiscard]] float    GetSoftPos_One()       const { return Ecd2One(GetSoftPos_Ecd()); }
 
 
-// private:
+private:
     static int16_t  PackStsData(uint8_t L, uint8_t H);
     static uint16_t ConvertStsData(uint16_t s);
     static bool     IsLowByteRegister(REG reg);
-    static int16_t  Rad2Encoder(const float v) { return static_cast<int16_t>(USER_1_2PI * Rad2Round(v) * ENCODER_RESOLUTION); }
-    static float    Encoder2Rad(const int16_t v) { return Round2Rad(v) / static_cast<float>(ENCODER_RESOLUTION); }
+    static int16_t  Rad2Ecd(const float v) { return static_cast<int16_t>(USER_1_2PI * Rad2Round(v) * ENCODER_RESOLUTION); }
+    static float    Ecd2Rad(const int16_t v) { return Round2Rad(v) / static_cast<float>(ENCODER_RESOLUTION); }
+
+    [[nodiscard]] float Ecd2One(const int16_t v) const { return Map(v, soft_min_pos_ecd_, soft_max_pos_ecd_, 0.0f, 1.0f); }
+    [[nodiscard]] int16_t One2Ecd(const float v) const { return static_cast<int16_t>(Map(v, 0.0f, 1.0f, soft_min_pos_ecd_, soft_max_pos_ecd_)); }
 
     const uint16_t zero_point_ecd_;
     const uint16_t min_pos_ecd_; const int16_t soft_min_pos_ecd_;

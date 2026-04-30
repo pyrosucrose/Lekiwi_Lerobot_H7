@@ -69,7 +69,7 @@ void cChassis::TransmitBusControlCmd()
 
     for (const auto& motor : motors)
     {
-        const uint16_t val = cMotorSts::ConvertStsData(motor.GetTargetVel_Ecd());
+        const uint16_t val = cMotorSts::ConvertStsData(motor.GetHardTargetVel_Ecd());
 
         uart10_tx_buffer[idx++] = motor.GetID();
         uart10_tx_buffer[idx++] = val;
