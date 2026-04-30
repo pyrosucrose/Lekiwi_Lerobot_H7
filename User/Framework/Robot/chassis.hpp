@@ -22,9 +22,9 @@ public:
     cChassis():
         motors
         {
-        {8,0,0,0,false},
-        {9,0,0,0,false},
-        {7,0,0,0,false},
+        {8,0,0,0,true},
+        {9,0,0,0,true},
+        {7,0,0,0,true},
         }
     {}
 
@@ -38,5 +38,5 @@ public:
 
     float target_speed[3] = {};
     float target_wheel_speed[3] = {};
-    cMotorSts motors[3];
+    MotorSts motors[3];
 };

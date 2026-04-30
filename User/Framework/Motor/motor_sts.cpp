@@ -22,7 +22,7 @@
  * @param   H: 高位数据(数组后)
  * @retval  拼接后数据，为int16
  */
-int16_t cMotorSts::PackStsData(const uint8_t L, const uint8_t H)
+int16_t MotorSts::PackStsData(const uint8_t L, const uint8_t H)
 {
     auto s = static_cast<int16_t>(H << 8 | L);
     if ((s & 0x8000) != 0) s = static_cast<int16_t>(-(s & 0x7FFF));
@@ -37,7 +37,7 @@ int16_t cMotorSts::PackStsData(const uint8_t L, const uint8_t H)
  * @note    虽然声明传入的是uint16，但传int16也是一样的
  * @note    想出这样处理(u)int16的家里清明节指定能多出些什么来
  */
-uint16_t cMotorSts::ConvertStsData(const uint16_t s)
+uint16_t MotorSts::ConvertStsData(const uint16_t s)
 {
     return s & 0x8000 ? static_cast<uint16_t>(-(s & 0x7FFF)) : s;
 }
@@ -47,7 +47,7 @@ uint16_t cMotorSts::ConvertStsData(const uint16_t s)
  * @param   reg:寄存器地址
  * @retval  是不是
  */
-bool cMotorSts::IsLowByteRegister(const REG reg)
+bool MotorSts::IsLowByteRegister(const REG reg)
 {
     return reg == REG::TARGET_POSITION_L ||
            reg == REG::TARGET_SPEED_L ||
@@ -60,16 +60,29 @@ bool cMotorSts::IsLowByteRegister(const REG reg)
            reg == REG::TORQUE_LIMIT_L;
 }
 
-cMotorSts::cMotorSts(const uint8_t ID, const uint16_t zero_point, const uint16_t min_angle, const uint16_t max_angle, const bool reversed) :
-    zero_point_ecd_(zero_point),
+/**
+ * @brief   电机的构造函数
+ * @details 新建电机后会将其添加至静态数组中以便批量操作
+ * @param   ID          :该电机ID
+ * @param   zero_point  :电机零点(用户希望电机所在的零点)
+ * @param   min_angle   :电机所有允许的姿态下，编码器最小值
+ * @param   max_angle   :电机所有允许的姿态下，编码器最大值
+ * @param   reversed    :是否反转，和安装方式相关(若用户期望的电机方向和点击实际方向相反就设为true)
+ * @note    若从这进了Crash那可能是电机ID冲突或是注册的电机过多导致超出MAX_MOTORS_COUNT，需要修正或修改相关配置
+ * @warning 对于重复ID的处理能力有限，用户必须保证没用重复ID的电机被写入！
+ */
+MotorSts::MotorSts(const uint8_t ID, const uint16_t zero_point, const uint16_t min_angle, const uint16_t max_angle, const bool reversed) :
+    ID_(ID), is_reversed_(reversed), zero_point_ecd_(zero_point),
     min_pos_ecd_(min_angle), soft_min_pos_ecd_(static_cast<int16_t>(min_angle - zero_point)),
-    max_pos_ecd_(max_angle), soft_max_pos_ecd_(static_cast<int16_t>(max_angle - zero_point)),
-    is_reversed_(reversed), ID_(ID)
+    max_pos_ecd_(max_angle), soft_max_pos_ecd_(static_cast<int16_t>(max_angle - zero_point))
 {
     if (motors_count_ < MAX_MOTORS_COUNT)
     {
-        motors_[motors_count_++] = this;
+        motors_[motors_count_] = this;
+        if (motors_idx_[ID] != 0x00 && motors_idx_[ID] != Special::ILLEGAL_ID)  // 没辙，否则idx_必须手动写255个0xFF进去
+            Crash();
         motors_idx_[ID] = motors_count_;
+        motors_count_++;
     }
     else
     {
@@ -77,7 +90,12 @@ cMotorSts::cMotorSts(const uint8_t ID, const uint16_t zero_point, const uint16_t
     }
 }
 
-cMotorSts::~cMotorSts()
+/**
+ * @brief   电机的析构函数
+ * @details 会查找静态电机列表找到当前电机，随后在idx_与motors_中注销该电机并且用最后一个电机覆盖
+ * @note    若从这进了Crash那大概率是代码逻辑问题，还请及时汇报，感激不尽！
+ */
+MotorSts::~MotorSts()
 {
     for (uint8_t i = 0; i < motors_count_; i++)
     {
@@ -96,7 +114,15 @@ cMotorSts::~cMotorSts()
     Crash();
 }
 
-void cMotorSts::RxCallback(const uint8_t* data)
+/**
+ * @brief   电机的中断回调处理函数
+ * @details 该函数会先比对数据格式的正确性，并且将有用数据拷贝进电机的rx_buffer_中
+ * @param   data: 数据的指针
+ * @note    该函数应该作为MotorSts::RxCallback的形式在串口接收回调中被调用，而不是在main或RTOS等地方被主动调用
+ * @note    仅拷贝数据，解析数据需要用户主动调用MotorSts::UnpackAll
+ * @note    如果从if中进入Crash，是由于电机buffer长度过短，可修改MAX_BUF_LEN配置，若是在函数结尾进入，大概率是代码逻辑问题，还请汇报！
+ */
+void MotorSts::RxCallback(const uint8_t* data)
 {
     if (data[0] != 0xFF || data[1] != 0xFF)
     {
@@ -137,14 +163,25 @@ void cMotorSts::RxCallback(const uint8_t* data)
     Crash();
 }
 
-void cMotorSts::UnpackAll()
+/**
+ * @brief   解析所有电机的数据
+ * @details 对于有新数据返回的电机，调用UnpackData来解析
+ * @note    该函数应该在主循环或任务中由用户手动调用
+ * @todo    目前似乎没有对解析时新数据传入的保护
+ */
+void MotorSts::UnpackAll()
 {
     for (uint8_t i = 0; i < motors_count_; i++)
         if (motors_[i]->received_pack_)
             motors_[i]->UnpackData();
 }
 
-void cMotorSts::UnpackData()
+/**
+ * @brief   解析电机数据
+ * @details 解包返回帧，并设置标志位
+ * @note    用户可选择开启DEBUG_NODE来看其它数据
+ */
+void MotorSts::UnpackData()
 {
     status_ = rx_buffer_[1]; error_ = status_;  // 错误码处理
 
@@ -153,6 +190,14 @@ void cMotorSts::UnpackData()
     {
         switch(static_cast<REG>(read_reg_l_ + cnt))
         {
+        case REG::MIN_ANGLE_LIMIT_L:
+            min_pos_ecd_ = PackStsData(rx_buffer_[i], rx_buffer_[i + 1]);
+            soft_min_pos_ecd_ = static_cast<int16_t>(min_pos_ecd_ - zero_point_ecd_);
+            break;
+        case REG::MAX_ANGLE_LIMIT_L:
+            max_pos_ecd_ = PackStsData(rx_buffer_[i], rx_buffer_[i + 1]);
+            soft_max_pos_ecd_ = static_cast<int16_t>(max_pos_ecd_ - zero_point_ecd_);
+            break;
         case REG::NOW_POS_L:
             pos_ecd_  = PackStsData(rx_buffer_[i], rx_buffer_[i + 1]);
             soft_pos_ecd = static_cast<int16_t>(is_reversed_ ? zero_point_ecd_ - pos_ecd_ : zero_point_ecd_ + pos_ecd_);
@@ -173,60 +218,60 @@ void cMotorSts::UnpackData()
             switch(static_cast<REG>(read_reg_l_ + cnt))
             {
             // RO(EPROM)
-            case REG::FIRMWARE_MAJOR_VERSION:   usart_printf("[0x%02X] firmware major version: 0x%02X\n", ID_, rx_buffer_[i]);                                         break;
-            case REG::FIRMWARE_MINOR_VERSION:   usart_printf("[0x%02X] firmware minor version: 0x%02X\n", ID_, rx_buffer_[i]);                                         break;
-            case REG::END_MARKER:               usart_printf("[0x%02X] end marker: 0x%02X\n", ID_, rx_buffer_[i]);                                                     break;
-            case REG::SERVO_MAJOR_VERSION:      usart_printf("[0x%02X] servo major version: 0x%02X\n", ID_, rx_buffer_[i]);                                            break;
-            case REG::SERVO_MINOR_VERSION:      usart_printf("[0x%02X] servo minor version: 0x%02X\n", ID_, rx_buffer_[i]);                                            break;
+            case REG::FIRMWARE_MAJOR_VERSION:   usart_printf("[0x%02X] firmware major version: 0x%02X\n", ID_, rx_buffer_[i]);                                     break;
+            case REG::FIRMWARE_MINOR_VERSION:   usart_printf("[0x%02X] firmware minor version: 0x%02X\n", ID_, rx_buffer_[i]);                                     break;
+            case REG::END_MARKER:               usart_printf("[0x%02X] end marker: 0x%02X\n", ID_, rx_buffer_[i]);                                                 break;
+            case REG::SERVO_MAJOR_VERSION:      usart_printf("[0x%02X] servo major version: 0x%02X\n", ID_, rx_buffer_[i]);                                        break;
+            case REG::SERVO_MINOR_VERSION:      usart_printf("[0x%02X] servo minor version: 0x%02X\n", ID_, rx_buffer_[i]);                                        break;
             // RW(EPROM)
-            case REG::ID:                       usart_printf("[0x%02X] id: 0x%02X\n", ID_, rx_buffer_[i]);                                                             break;
-            case REG::BAUD_RATE:                usart_printf("[0x%02X] baud rate: 0x%02X\n", ID_, rx_buffer_[i]);                                                      break;
-            case REG::RETURN_DELAY:             usart_printf("[0x%02X] return delay: 0x%02X\n", ID_, rx_buffer_[i]);                                                   break;
-            case REG::RESPONSE_STATUS_LEVEL:    usart_printf("[0x%02X] response status level: 0x%02X\n", ID_, rx_buffer_[i]);                                          break;
-            case REG::MIN_ANGLE_LIMIT_L:        usart_printf("[0x%02X] min angle limit: 0x%04X\n", ID_, static_cast<uint16_t>(rx_buffer_[i + 1] << 8 | rx_buffer_[i]));      break;
-            case REG::MAX_ANGLE_LIMIT_L:        usart_printf("[0x%02X] max angle limit: 0x%04X\n", ID_, static_cast<uint16_t>(rx_buffer_[i + 1] << 8 | rx_buffer_[i]));      break;
-            case REG::MAX_TEMPERATURE:          usart_printf("[0x%02X] max temperature: 0x%02X\n", ID_, rx_buffer_[i]);                                                break;
-            case REG::MAX_VOLTAGE:              usart_printf("[0x%02X] max voltage: 0x%02X\n", ID_, rx_buffer_[i]);                                                    break;
-            case REG::MIN_VOLTAGE:              usart_printf("[0x%02X] min voltage: 0x%02X\n", ID_, rx_buffer_[i]);                                                    break;
-            case REG::MAX_TORQUE_L:             usart_printf("[0x%02X] max torque: 0x%04X\n", ID_, static_cast<uint16_t>(rx_buffer_[i + 1] << 8 | rx_buffer_[i]));           break;
-            case REG::PHASE:                    usart_printf("[0x%02X] phase: 0x%02X\n", ID_, rx_buffer_[i]);                                                          break;
-            case REG::UNLOAD_CONDITION:         usart_printf("[0x%02X] unload condition: 0x%02X\n", ID_, rx_buffer_[i]);                                               break;
-            case REG::LED_ALARM_CONDITION:      usart_printf("[0x%02X] led alarm condition: 0x%02X\n", ID_, rx_buffer_[i]);                                            break;
-            case REG::POS_P_GAIN:               usart_printf("[0x%02X] pos p gain: 0x%02X\n", ID_, rx_buffer_[i]);                                                     break;
-            case REG::POS_D_GAIN:               usart_printf("[0x%02X] pos d gain: 0x%02X\n", ID_, rx_buffer_[i]);                                                     break;
-            case REG::POS_I_GAIN:               usart_printf("[0x%02X] pos i gain: 0x%02X\n", ID_, rx_buffer_[i]);                                                     break;
-            case REG::MIN_START_TORQUE:         usart_printf("[0x%02X] min start torque: 0x%02X\n", ID_, rx_buffer_[i]);                                               break;
-            case REG::INTEGRAL_LIMIT:           usart_printf("[0x%02X] integral limit: 0x%02X\n", ID_, rx_buffer_[i]);                                                 break;
-            case REG::CW_DEAD_ZONE:             usart_printf("[0x%02X] cw dead zone: 0x%02X\n", ID_, rx_buffer_[i]);                                                   break;
-            case REG::CCW_DEAD_ZONE:            usart_printf("[0x%02X] ccw dead zone: 0x%02X\n", ID_, rx_buffer_[i]);                                                  break;
-            case REG::PROTECTION_CURRENT_L:     usart_printf("[0x%02X] protection current: 0x%02X\n", ID_, static_cast<uint16_t>(rx_buffer_[i + 1] << 8 | rx_buffer_[i]));   break;
-            case REG::ANGLE_RESOLUTION:         usart_printf("[0x%02X] angle resolution: 0x%02X\n", ID_, rx_buffer_[i]);                                               break;
-            case REG::POSITION_CORRECTION_L:    usart_printf("[0x%02X] position correction: 0x%04X\n", ID_, static_cast<int16_t>(rx_buffer_[i + 1] << 8 | rx_buffer_[i]));   break;
-            case REG::OPERATION_MODE:           usart_printf("[0x%02X] operation mode: 0x%02X\n", ID_, rx_buffer_[i]);                                                 break;
-            case REG::PROTECTION_TORQUE:        usart_printf("[0x%02X] protection torque: 0x%02X\n", ID_, rx_buffer_[i]);                                              break;
-            case REG::PROTECTION_TIME:          usart_printf("[0x%02X] protection time: 0x%02X\n", ID_, rx_buffer_[i]);                                                break;
-            case REG::OVERLOAD_TORQUE:          usart_printf("[0x%02X] overload torque: 0x%02X\n", ID_, rx_buffer_[i]);                                                break;
-            case REG::SPEED_P_GAIN:             usart_printf("[0x%02X] speed p gain: 0x%02X\n", ID_, rx_buffer_[i]);                                                   break;
-            case REG::OVERCURRENT_PROTECT_TIME: usart_printf("[0x%02X] overcurrent protect time: 0x%02X\n", ID_, rx_buffer_[i]);                                       break;
-            case REG::SPEED_I_GAIN:             usart_printf("[0x%02X] speed i gain: 0x%02X\n", ID_, rx_buffer_[i]);                                                   break;
+            case REG::ID:                       usart_printf("[0x%02X] id: 0x%02X\n", ID_, rx_buffer_[i]);                                                         break;
+            case REG::BAUD_RATE:                usart_printf("[0x%02X] baud rate: 0x%02X\n", ID_, rx_buffer_[i]);                                                  break;
+            case REG::RETURN_DELAY:             usart_printf("[0x%02X] return delay: 0x%02X\n", ID_, rx_buffer_[i]);                                               break;
+            case REG::RESPONSE_STATUS_LEVEL:    usart_printf("[0x%02X] response status level: 0x%02X\n", ID_, rx_buffer_[i]);                                      break;
+            case REG::MIN_ANGLE_LIMIT_L:        usart_printf("[0x%02X] min angle limit: %d\n", ID_, PackStsData(rx_buffer_[i], rx_buffer_[i + 1]));                break;
+            case REG::MAX_ANGLE_LIMIT_L:        usart_printf("[0x%02X] max angle limit: %d\n", ID_, PackStsData(rx_buffer_[i], rx_buffer_[i + 1]));                break;
+            case REG::MAX_TEMPERATURE:          usart_printf("[0x%02X] max temperature: 0x%02X\n", ID_, rx_buffer_[i]);                                            break;
+            case REG::MAX_VOLTAGE:              usart_printf("[0x%02X] max voltage: 0x%02X\n", ID_, rx_buffer_[i]);                                                break;
+            case REG::MIN_VOLTAGE:              usart_printf("[0x%02X] min voltage: 0x%02X\n", ID_, rx_buffer_[i]);                                                break;
+            case REG::MAX_TORQUE_L:             usart_printf("[0x%02X] max torque: %d\n", ID_, PackStsData(rx_buffer_[i], rx_buffer_[i + 1]));                     break;
+            case REG::PHASE:                    usart_printf("[0x%02X] phase: 0x%02X\n", ID_, rx_buffer_[i]);                                                      break;
+            case REG::UNLOAD_CONDITION:         usart_printf("[0x%02X] unload condition: 0x%02X\n", ID_, rx_buffer_[i]);                                           break;
+            case REG::LED_ALARM_CONDITION:      usart_printf("[0x%02X] led alarm condition: 0x%02X\n", ID_, rx_buffer_[i]);                                        break;
+            case REG::POS_P_GAIN:               usart_printf("[0x%02X] pos p gain: 0x%02X\n", ID_, rx_buffer_[i]);                                                 break;
+            case REG::POS_D_GAIN:               usart_printf("[0x%02X] pos d gain: 0x%02X\n", ID_, rx_buffer_[i]);                                                 break;
+            case REG::POS_I_GAIN:               usart_printf("[0x%02X] pos i gain: 0x%02X\n", ID_, rx_buffer_[i]);                                                 break;
+            case REG::MIN_START_TORQUE:         usart_printf("[0x%02X] min start torque: 0x%02X\n", ID_, rx_buffer_[i]);                                           break;
+            case REG::INTEGRAL_LIMIT:           usart_printf("[0x%02X] integral limit: 0x%02X\n", ID_, rx_buffer_[i]);                                             break;
+            case REG::CW_DEAD_ZONE:             usart_printf("[0x%02X] cw dead zone: 0x%02X\n", ID_, rx_buffer_[i]);                                               break;
+            case REG::CCW_DEAD_ZONE:            usart_printf("[0x%02X] ccw dead zone: 0x%02X\n", ID_, rx_buffer_[i]);                                              break;
+            case REG::PROTECTION_CURRENT_L:     usart_printf("[0x%02X] protection current: %d\n", ID_, PackStsData(rx_buffer_[i], rx_buffer_[i + 1]));             break;
+            case REG::ANGLE_RESOLUTION:         usart_printf("[0x%02X] angle resolution: 0x%02X\n", ID_, rx_buffer_[i]);                                           break;
+            case REG::POSITION_CORRECTION_L:    usart_printf("[0x%02X] position correction: %d\n", ID_, PackStsData(rx_buffer_[i], rx_buffer_[i + 1]));            break;
+            case REG::OPERATION_MODE:           usart_printf("[0x%02X] operation mode: 0x%02X\n", ID_, rx_buffer_[i]);                                             break;
+            case REG::PROTECTION_TORQUE:        usart_printf("[0x%02X] protection torque: 0x%02X\n", ID_, rx_buffer_[i]);                                          break;
+            case REG::PROTECTION_TIME:          usart_printf("[0x%02X] protection time: 0x%02X\n", ID_, rx_buffer_[i]);                                            break;
+            case REG::OVERLOAD_TORQUE:          usart_printf("[0x%02X] overload torque: 0x%02X\n", ID_, rx_buffer_[i]);                                            break;
+            case REG::SPEED_P_GAIN:             usart_printf("[0x%02X] speed p gain: 0x%02X\n", ID_, rx_buffer_[i]);                                               break;
+            case REG::OVERCURRENT_PROTECT_TIME: usart_printf("[0x%02X] overcurrent protect time: 0x%02X\n", ID_, rx_buffer_[i]);                                   break;
+            case REG::SPEED_I_GAIN:             usart_printf("[0x%02X] speed i gain: 0x%02X\n", ID_, rx_buffer_[i]);                                               break;
             // RW(SRAM)
-            case REG::TORQUE_SWITCH:            usart_printf("[0x%02X] torque switch: 0x%02X\n", ID_, rx_buffer_[i]);                                                  break;
-            case REG::ACCELERATION:             usart_printf("[0x%02X] acceleration: 0x%02X\n", ID_, rx_buffer_[i]);                                                   break;
-            case REG::TARGET_POSITION_L:        usart_printf("[0x%02X] goal position: 0x%04X\n", ID_, static_cast<int16_t>(rx_buffer_[i + 1] << 8 | rx_buffer_[i]));         break;
-            case REG::MOVING_TIME_L:            usart_printf("[0x%02X] moving time: 0x%04X\n", ID_, static_cast<uint16_t>(rx_buffer_[i + 1] << 8 | rx_buffer_[i]));          break;
-            case REG::TARGET_SPEED_L:           usart_printf("[0x%02X] goal speed: 0x%04X\n", ID_, static_cast<int16_t>(rx_buffer_[i + 1] << 8 | rx_buffer_[i]));            break;
-            case REG::TORQUE_LIMIT_L:           usart_printf("[0x%02X] torque limit: 0x%04X\n", ID_, static_cast<uint16_t>(rx_buffer_[i + 1] << 8 | rx_buffer_[i]));         break;
-            case REG::LOCK:                     usart_printf("[0x%02X] lock: 0x%02X\n", ID_, rx_buffer_[i]);                                                           break;
+            case REG::TORQUE_SWITCH:            usart_printf("[0x%02X] torque switch: 0x%02X\n", ID_, rx_buffer_[i]);                                              break;
+            case REG::ACCELERATION:             usart_printf("[0x%02X] acceleration: 0x%02X\n", ID_, rx_buffer_[i]);                                               break;
+            case REG::TARGET_POSITION_L:        usart_printf("[0x%02X] goal position: %d\n", ID_, PackStsData(rx_buffer_[i], rx_buffer_[i + 1]));                  break;
+            case REG::MOVING_TIME_L:            usart_printf("[0x%02X] moving time: %d\n", ID_, PackStsData(rx_buffer_[i], rx_buffer_[i + 1]));                    break;
+            case REG::TARGET_SPEED_L:           usart_printf("[0x%02X] goal speed: %d\n", ID_, PackStsData(rx_buffer_[i], rx_buffer_[i + 1]));                     break;
+            case REG::TORQUE_LIMIT_L:           usart_printf("[0x%02X] torque limit: %d\n", ID_, PackStsData(rx_buffer_[i], rx_buffer_[i + 1]));                   break;
+            case REG::LOCK:                     usart_printf("[0x%02X] lock: 0x%02X\n", ID_, rx_buffer_[i]);                                                       break;
             // RO(SRAM)
-            case REG::NOW_POS_L:                usart_printf("[0x%02X] pos: 0x%04X\n", ID_, static_cast<uint16_t>(rx_buffer_[i + 1] << 8 | rx_buffer_[i]));                  break;
-            case REG::NOW_SPEED_L:              usart_printf("[0x%02X] speed: 0x%04X\n", ID_, static_cast<uint16_t>(rx_buffer_[i + 1] << 8 | rx_buffer_[i]));                break;
-            case REG::NOW_LOAD_L:               usart_printf("[0x%02X] load: 0x%04X\n", ID_, static_cast<uint16_t>(rx_buffer_[i + 1] << 8 | rx_buffer_[i]));                 break;
-            case REG::NOW_VOLT:                 usart_printf("[0x%02X] volt: 0x%02X\n", ID_, rx_buffer_[i]);                                                           break;
-            case REG::NOW_TEMP:                 usart_printf("[0x%02X] temp: 0x%02X\n", ID_, rx_buffer_[i]);                                                           break;
-            case REG::ASYNCHRONOUS_WRITE:       usart_printf("[0x%02X] asynchronous write: 0x%02X\n", ID_, rx_buffer_[i]);                                             break;
-            case REG::STATUS:                   usart_printf("[0x%02X] status: 0x%02X\n", ID_, rx_buffer_[i]);                                                         break;
-            case REG::IS_MOVING:                usart_printf("[0x%02X] is moving: 0x%02X\n", ID_, rx_buffer_[i]);                                                      break;
-            case REG::NOW_CURRENT_L:            usart_printf("[0x%02X] current: 0x%04X\n", ID_, static_cast<uint16_t>(rx_buffer_[i + 1] << 8 | rx_buffer_[i]));              break;
+            case REG::NOW_POS_L:                usart_printf("[0x%02X] pos: %d\n", ID_, PackStsData(rx_buffer_[i], rx_buffer_[i + 1]));                            break;
+            case REG::NOW_SPEED_L:              usart_printf("[0x%02X] speed: %d\n", ID_, PackStsData(rx_buffer_[i], rx_buffer_[i + 1]));                          break;
+            case REG::NOW_LOAD_L:               usart_printf("[0x%02X] load: %d\n", ID_, PackStsData(rx_buffer_[i], rx_buffer_[i + 1]));                           break;
+            case REG::NOW_VOLT:                 usart_printf("[0x%02X] volt: 0x%02X\n", ID_, rx_buffer_[i]);                                                       break;
+            case REG::NOW_TEMP:                 usart_printf("[0x%02X] temp: 0x%02X\n", ID_, rx_buffer_[i]);                                                       break;
+            case REG::ASYNCHRONOUS_WRITE:       usart_printf("[0x%02X] asynchronous write: 0x%02X\n", ID_, rx_buffer_[i]);                                         break;
+            case REG::STATUS:                   usart_printf("[0x%02X] status: 0x%02X\n", ID_, rx_buffer_[i]);                                                     break;
+            case REG::IS_MOVING:                usart_printf("[0x%02X] is moving: 0x%02X\n", ID_, rx_buffer_[i]);                                                  break;
+            case REG::NOW_CURRENT_L:            usart_printf("[0x%02X] current: %d\n", ID_, PackStsData(rx_buffer_[i], rx_buffer_[i + 1]));                        break;
             default: break;
             }
         }
@@ -237,14 +282,14 @@ void cMotorSts::UnpackData()
 }
 
 
-void cMotorSts::AddReadReg(const REG reg)
+void MotorSts::AddReadReg(const REG reg)
 {
     const auto addr = static_cast<uint8_t>(reg);
     if (addr < read_reg_l_) read_reg_l_ = addr;
     if (addr > read_reg_h_) read_reg_h_ = addr;
 }
 
-void cMotorSts::AddReadRangeByCount(const REG start, const uint8_t count)
+void MotorSts::AddReadRangeByCount(const REG start, const uint8_t count)
 {
     if (count == 0) return;
 
@@ -254,7 +299,7 @@ void cMotorSts::AddReadRangeByCount(const REG start, const uint8_t count)
     if (end_addr   > read_reg_h_) read_reg_h_ = end_addr;
 }
 
-void cMotorSts::AddReadRange(const REG start, const REG end)
+void MotorSts::AddReadRange(const REG start, const REG end)
 {
     const auto start_addr = static_cast<uint8_t>(start);
     const auto end_addr = static_cast<uint8_t>(end);
@@ -263,13 +308,13 @@ void cMotorSts::AddReadRange(const REG start, const REG end)
     if (end_addr   > read_reg_h_) read_reg_h_ = end_addr;
 }
 
-void cMotorSts::SetReadRange(REG start, REG end)
+void MotorSts::SetReadRange(REG start, REG end)
 {
     read_reg_l_ =  static_cast<uint8_t>(start);
     read_reg_h_ =  static_cast<uint8_t>(end);
 }
 
-void cMotorSts::TransmitReadCommand() const
+void MotorSts::TransmitReadCommand() const
 {
     if (read_reg_h_ < read_reg_l_) return;
 
@@ -291,7 +336,7 @@ void cMotorSts::TransmitReadCommand() const
     HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx);
 }
 
-void cMotorSts::TransmitWriteCommand(const REG reg, uint16_t value) const
+void MotorSts::TransmitWriteCommand(const REG reg, uint16_t value) const
 {
     const auto is_16_bit_reg = IsLowByteRegister(reg);
     if (!is_16_bit_reg && (value & 0xFF00) != 0) Crash();    // 传参错误直接报错
@@ -317,7 +362,7 @@ void cMotorSts::TransmitWriteCommand(const REG reg, uint16_t value) const
     HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx);
 }
 
-void cMotorSts::ControlAll()
+void MotorSts::ControlAll()
 {
     uint8_t idx = 0;
     uart10_tx_buffer[idx++] = 0xFF;
@@ -355,7 +400,7 @@ void cMotorSts::ControlAll()
     HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx);
 }
 
-void cMotorSts::ReadAll(REG start, REG end)
+void MotorSts::ReadAll(REG start, REG end)
 {
     const auto start_addr = static_cast<uint8_t>(start);
     const auto end_addr = static_cast<uint8_t>(end);
@@ -383,4 +428,9 @@ void cMotorSts::ReadAll(REG start, REG end)
     uart10_tx_buffer[idx++] = ~check_sum;
 
     HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx);
+}
+
+void MotorSts::Init()
+{
+    ReadAll(REG::MIN_ANGLE_LIMIT_L,REG::MAX_ANGLE_LIMIT_H);
 }

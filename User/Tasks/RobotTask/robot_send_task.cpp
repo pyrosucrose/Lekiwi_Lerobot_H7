@@ -23,7 +23,9 @@ void RobotSendTask(void *pv)
     portTickType current_time = xTaskGetTickCount();
     while (true)
     {
+        auto s = Delay::GetTimeStamp();
         robot_lekiwi.SendControl();
+        usart_printf("%f\n",Delay::CalculateInterval_us(s));
         // usart_printf("%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
         //     cMotorSts::motors_[0]->pos_ecd_,
         //     cMotorSts::motors_[1]->pos_ecd_,
@@ -35,6 +37,18 @@ void RobotSendTask(void *pv)
         //     cMotorSts::motors_[7]->pos_ecd_,
         //     cMotorSts::motors_[8]->pos_ecd_
         //     );
-        vTaskDelayUntil(&current_time, pdMS_TO_TICKS(TASK_ROBOT_SEND_TASK_PERIOD));       //让任务以 5 毫秒的周期运行
+        // usart_printf("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+        //     robot_lekiwi.arm.motors[1].soft_min_pos_ecd_,
+        //     robot_lekiwi.arm.motors[1].soft_max_pos_ecd_,
+        //     robot_lekiwi.arm.motors[2].soft_min_pos_ecd_,
+        //     robot_lekiwi.arm.motors[2].soft_max_pos_ecd_,
+        //     robot_lekiwi.arm.motors[3].soft_min_pos_ecd_,
+        //     robot_lekiwi.arm.motors[3].soft_max_pos_ecd_,
+        //     robot_lekiwi.arm.motors[4].soft_min_pos_ecd_,
+        //     robot_lekiwi.arm.motors[4].soft_max_pos_ecd_,
+        //     robot_lekiwi.arm.motors[5].soft_min_pos_ecd_,
+        //     robot_lekiwi.arm.motors[5].soft_max_pos_ecd_
+        //     );
+        vTaskDelayUntil(&current_time, pdMS_TO_TICKS(TASK_ROBOT_SEND_TASK_PERIOD));
     }
 }

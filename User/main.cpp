@@ -7,6 +7,7 @@
 #include "start_task.hpp"
 #include "buzzer.hpp"
 #include "delay.hpp"
+#include "motor_sts.hpp"
 
 void BSP_Init();
 void User_Init()
@@ -14,6 +15,7 @@ void User_Init()
     Usartio_Init();
     Buzzer::Init();
     Delay::Init();
+    // MotorSts::Init();
     TASK_StartInit();
 }
 

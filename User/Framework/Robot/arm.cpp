@@ -15,44 +15,87 @@
 // =============================== 函数实现 ===============================
 void cArm::GetDataFromRc()
 {
-    if (rc_data.GetRcSwitchB() == eRemoteSwitchValue::LOW)
-    {
-        target_x_last = target_x;
-        target_y_last = target_y;
-        target_theta_last = target_theta;
+    target_x_last = target_x;
+    target_y_last = target_y;
+    target_theta_last = target_theta;
 
+    target_gripper = Map(rc_data.GetRcKnobLeft(), -783.0, 783.0, 0.0f, 1.0f);
+
+    if (rc_data.GetRcSwitchC() == eRemoteSwitchValue::LOW)
+    {
+        target_x = target_x_last = 20.0f;
+        target_y = target_y_last = 45.0f;
+        target_theta = target_theta_last = -0.8f;
+        target_wrist = 0.485f;
+        return;
+    }
+
+    const bool is_mode_a = (rc_data.GetRcSwitchA() == eRemoteSwitchValue::LOW);
+    const bool is_mode_b = (rc_data.GetRcSwitchB() == eRemoteSwitchValue::LOW);
+
+    if (is_mode_a || is_mode_b)
+    {
+        target_wrist += rc_data.GetRcRightHorizontal() * 2e-3f;
+        target_wrist = Clamp(target_wrist, 0.0f, 1.0f);
+    }
+
+    if (is_mode_b)
+    {
         target_x += rc_data.GetRcLeftVertical() * 0.7f;
         target_y += rc_data.GetRcRightVertical() * 0.7f;
-
-        target_wrist -= rc_data.GetRcRightHorizontal() * 10.0f;
-        target_wrist = Clamp(target_wrist, 300-2057, 3980-2057);
-
-        target_x = Clamp(target_x, -200, 300);
-        target_y = Clamp(target_y, -200, 300);
     }
-    else if (rc_data.GetRcSwitchA() == eRemoteSwitchValue::LOW)
+    else if (is_mode_a)
     {
-        target_x_last = target_x;
-        target_y_last = target_y;
-        target_theta_last = target_theta;
-
-        target_x += rc_data.GetRcLeftVertical() * cosf(target_theta) * 0.7f; // rc_data.GetRcLeftVertical();
-        target_y += rc_data.GetRcLeftVertical() * sinf(target_theta) * 0.7f; // rc_data.GetRcRightVertical()
+        target_x += rc_data.GetRcLeftVertical() * cosf(target_theta) * 0.7f;
+        target_y += rc_data.GetRcLeftVertical() * sinf(target_theta) * 0.7f;
         target_theta += rc_data.GetRcRightVertical() / 100.0f;
-
-        target_wrist -= static_cast<int16_t>(rc_data.GetRcRightHorizontal() * 10.0f);
-        target_wrist = Clamp(target_wrist, 300-2057, 3980-2057);
-
-        target_x = Clamp(target_x, -200, 300);
-        target_y = Clamp(target_y, -200, 300);
-        target_theta = Clamp(target_theta, -M_PI * 3 / 5, M_PI * 3 / 4);
     }
     else
     {
         target_theta += rc_data.GetRcRightVertical() / 100.0f;
-        target_theta = Clamp(target_theta, -M_PI * 3 / 5, M_PI * 3 / 4);
     }
-    target_gripper = Map(rc_data.GetRcKnobLeft(), -783.0, 783.0, 0, 2870-1400);
+
+    target_x = Clamp(target_x, -200, 300);
+    target_y = Clamp(target_y, -200, 300);
+    target_theta = Clamp(target_theta, -M_PI * 3 / 5, M_PI * 3 / 4);
+
+    // if (rc_data.GetRcSwitchC() == eRemoteSwitchValue::LOW)
+    // {
+    //     target_x = 20.0f, target_y = 45.0f, target_theta = -0.8f;
+    //     target_x_last = 20.0f, target_y_last = 45.0f, target_theta_last = -0.8f;
+    // }
+    // else
+    // {
+    //     if (rc_data.GetRcSwitchB() == eRemoteSwitchValue::LOW)
+    //     {
+    //         target_x += rc_data.GetRcLeftVertical() * 0.7f;
+    //         target_y += rc_data.GetRcRightVertical() * 0.7f;
+    //
+    //         target_wrist += rc_data.GetRcRightHorizontal() * 2e-3f;
+    //         target_wrist = Clamp(target_wrist, 0.0f, 1.0f);
+    //
+    //         target_x = Clamp(target_x, -200, 300);
+    //         target_y = Clamp(target_y, -200, 300);
+    //     }
+    //     else if (rc_data.GetRcSwitchA() == eRemoteSwitchValue::LOW)
+    //     {
+    //         target_x += rc_data.GetRcLeftVertical() * cosf(target_theta) * 0.7f; // rc_data.GetRcLeftVertical();
+    //         target_y += rc_data.GetRcLeftVertical() * sinf(target_theta) * 0.7f; // rc_data.GetRcRightVertical()
+    //         target_theta += rc_data.GetRcRightVertical() / 100.0f;
+    //
+    //         target_wrist += rc_data.GetRcRightHorizontal() * 4e-3f;
+    //         target_wrist = Clamp(target_wrist, 0.0f, 1.0f);
+    //
+    //         target_x = Clamp(target_x, -200, 300);
+    //         target_y = Clamp(target_y, -200, 300);
+    //         target_theta = Clamp(target_theta, -M_PI * 3 / 5, M_PI * 3 / 4);
+    //     }
+    //     else
+    //     {
+    //         target_theta += rc_data.GetRcRightVertical() / 100.0f;
+    //         target_theta = Clamp(target_theta, -M_PI * 3 / 5, M_PI * 3 / 4);
+    //     }
+    // }
 }
 
 bool cArm::Solve()
@@ -79,13 +122,14 @@ bool cArm::Solve()
     const float c1 = Round_v(target_theta - beta_1, 2 * M_PI);
     const float c2 = Round_v(target_theta - beta_2, 2 * M_PI);
 
+    motors[0].SetTargetPos_Rad(0);
     if (motors[1].IsSafePos_Rad(a1) && motors[2].IsSafePos_Rad(b1) && motors[3].IsSafePos_Rad(c1))
     {
         motors[1].SetTargetPos_Rad(a1);
         motors[2].SetTargetPos_Rad(b1);
         motors[3].SetTargetPos_Rad(c1);
-        motors[4].SetTargetPos_Ecd(target_wrist);
-        motors[5].SetTargetPos_Ecd(target_gripper);
+        motors[4].SetTargetPos_One(target_wrist);
+        motors[5].SetTargetPos_One(target_gripper);
         return true;
     }
     if (motors[1].IsSafePos_Rad(a2) && motors[2].IsSafePos_Rad(b2) && motors[3].IsSafePos_Rad(c2))
@@ -93,8 +137,8 @@ bool cArm::Solve()
         motors[1].SetTargetPos_Rad(a2);
         motors[2].SetTargetPos_Rad(b2);
         motors[3].SetTargetPos_Rad(c2);
-        motors[4].SetTargetPos_Ecd(target_wrist);
-        motors[5].SetTargetPos_Ecd(target_gripper);
+        motors[4].SetTargetPos_One(target_wrist);
+        motors[5].SetTargetPos_One(target_gripper);
         return true;
     }
     return false;
@@ -124,15 +168,15 @@ void cArm::TransmitBusControlCmd()
     uint8_t idx = 0;
     uart10_tx_buffer[idx++] = 0xFF;
     uart10_tx_buffer[idx++] = 0xFF;
-    uart10_tx_buffer[idx++] = cMotorSts::Special::MASTER_ID;
-    uart10_tx_buffer[idx++] = cMotorSts::Special::DUMMY;
-    uart10_tx_buffer[idx++] = cMotorSts::Command::SYN_WRITE;
-    uart10_tx_buffer[idx++] = static_cast<uint8_t>(cMotorSts::REG::TARGET_POSITION_L);
+    uart10_tx_buffer[idx++] = MotorSts::Special::MASTER_ID;
+    uart10_tx_buffer[idx++] = MotorSts::Special::DUMMY;
+    uart10_tx_buffer[idx++] = MotorSts::Command::SYN_WRITE;
+    uart10_tx_buffer[idx++] = static_cast<uint8_t>(MotorSts::REG::TARGET_POSITION_L);
     uart10_tx_buffer[idx++] = 0x02;
 
     for (const auto& motor : motors)
     {
-        const uint16_t val = cMotorSts::ConvertStsData(motor.GetHardTargetPos_Ecd());
+        const uint16_t val = MotorSts::ConvertStsData(motor.GetHardTargetPos_Ecd());
 
         uart10_tx_buffer[idx++] = motor.GetID();
         uart10_tx_buffer[idx++] = val;
@@ -154,10 +198,10 @@ void cArm::DisableAll()
     uint8_t idx = 0;
     uart10_tx_buffer[idx++] = 0xFF;
     uart10_tx_buffer[idx++] = 0xFF;
-    uart10_tx_buffer[idx++] = cMotorSts::Special::MASTER_ID;
-    uart10_tx_buffer[idx++] = cMotorSts::Special::DUMMY;
-    uart10_tx_buffer[idx++] = cMotorSts::Command::SYN_WRITE;
-    uart10_tx_buffer[idx++] = static_cast<uint8_t>(cMotorSts::REG::TORQUE_SWITCH);
+    uart10_tx_buffer[idx++] = MotorSts::Special::MASTER_ID;
+    uart10_tx_buffer[idx++] = MotorSts::Special::DUMMY;
+    uart10_tx_buffer[idx++] = MotorSts::Command::SYN_WRITE;
+    uart10_tx_buffer[idx++] = static_cast<uint8_t>(MotorSts::REG::TORQUE_SWITCH);
     uart10_tx_buffer[idx++] = 0x01;
 
     for (const auto& motor : motors)
@@ -188,6 +232,6 @@ void cArm::ControlLoop()
             target_theta = target_theta_last;
         }
         SolveEnd();
-        DeSolve();
+        // DeSolve();
     }
 }

@@ -103,6 +103,7 @@ namespace Buzzer
         SetTone(2000); // 在buzzer::loop开始前会一直响 // 妙(板)一直响!
         AddToNoteTrack(do_6, 80);
         AddToNoteTrack(mute, 750);
+        // AddToNoteTrack(3000, 60);
         AddToNoteTrack(do_5, 60);
         AddToNoteTrack(fa_5, 60);
         AddToNoteTrack(fa_6, 60);

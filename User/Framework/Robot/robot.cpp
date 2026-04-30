@@ -38,13 +38,13 @@ void cRobot::SendControl()
 
     if (read_motor_info)
     {
-        cMotorSts::ReadAll(cMotorSts::REG::LOCK, cMotorSts::REG::NOW_TEMP);
+        MotorSts::ReadAll(MotorSts::REG::LOCK, MotorSts::REG::NOW_TEMP);
     }
     else
     {
         if (rc_data.IsRcOnline() && rc_data.GetRcSwitchC() != eRemoteSwitchValue::HIGH)
         {
-            cMotorSts::ControlAll();
+            MotorSts::ControlAll();
         }
         else
         {

@@ -24,6 +24,7 @@ static constexpr float RC_CHANNEL_MAX       = 784.0f;
 #define FSI6X_CHANNEL_10                rc_switch_D
 #endif
 
+static constexpr uint8_t REMOTE_DEAD_ZONE = 5;
 // =============================== 变量区 ==================================
 
 // =============================== 函数实现 ===============================
@@ -90,10 +91,10 @@ void cRemoteData::RcUpdateValue(const uint8_t *data)
     FSI6X_CHANNEL_9  = static_cast<int16_t>(((data[13] <<  8 | data[12])                        & 0x7FF) - RC_OFFSET);
     FSI6X_CHANNEL_10 = static_cast<int16_t>(((data[14] <<  5 | data[13] >> 3)                   & 0x7FF) - RC_OFFSET);
 
-    rc_left_horizontal_float    = static_cast<float>(rc_left_horizontal)  / RC_CHANNEL_MAX;
-    rc_left_vertical_float      = static_cast<float>(rc_left_vertical)    / RC_CHANNEL_MAX;
-    rc_right_horizontal_float   = static_cast<float>(rc_right_horizontal) / RC_CHANNEL_MAX;
-    rc_right_vertical_float     = static_cast<float>(rc_right_vertical)   / RC_CHANNEL_MAX;
+    rc_left_horizontal_float    = static_cast<float>(abs(rc_left_horizontal) >= REMOTE_DEAD_ZONE ? rc_left_horizontal : 0)  / RC_CHANNEL_MAX;
+    rc_left_vertical_float      = static_cast<float>(abs(rc_left_vertical) >= REMOTE_DEAD_ZONE ? rc_left_vertical : 0)    / RC_CHANNEL_MAX;
+    rc_right_horizontal_float   = static_cast<float>(abs(rc_right_horizontal) >= REMOTE_DEAD_ZONE ? rc_right_horizontal : 0) / RC_CHANNEL_MAX;
+    rc_right_vertical_float     = static_cast<float>(abs(rc_right_vertical) >= REMOTE_DEAD_ZONE ? rc_right_vertical : 0)   / RC_CHANNEL_MAX;
 
     rc_switch_A = ReturnSwitchStatus(rc_switch_A);
     rc_switch_B = ReturnSwitchStatus(rc_switch_B);

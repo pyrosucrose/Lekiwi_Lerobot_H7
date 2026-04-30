@@ -17,11 +17,11 @@
 // =============================== 函数声明 ===============================
 
 // =============================== 类声明 ===============================
-class cMotorSts
+class MotorSts
 {
     friend class cArm;
     friend class cChassis;
-    static constexpr uint8_t MAX_MOTORS_ID = 0xFD;
+    static constexpr uint8_t MAX_MOTOR_ID = 0xFD;
     static constexpr uint8_t MAX_MOTORS_COUNT = 20;
     static constexpr uint8_t MAX_BUF_LEN = 32;
     static constexpr bool DEBUG_MODE = false;
@@ -120,8 +120,8 @@ public:
         NOW_CURRENT_H            = 0x46, // R
     };
 
-    cMotorSts(uint8_t ID, uint16_t zero_point, uint16_t min_angle, uint16_t max_angle, bool reversed = false);
-    ~cMotorSts();
+    MotorSts(uint8_t ID, uint16_t zero_point, uint16_t min_angle, uint16_t max_angle, bool reversed = false);
+    ~MotorSts();
 
     void AddReadReg(REG reg);
     void AddReadRangeByCount(REG start, uint8_t count);
@@ -135,6 +135,7 @@ public:
     static void UnpackAll();
     static void ControlAll();
     static void ReadAll(REG start, REG end);
+    static void Init();
 
     void SetTargetPos_Ecd(const int16_t t) { soft_target_pos_ecd_ = t; target_pos_ecd_ = is_reversed_ ? zero_point_ecd_ - t : zero_point_ecd_ + t; is_param_set_ = true; }
     void SetTargetPos_Rad(const float t)   { SetTargetPos_Ecd(Rad2Ecd(t)); }
@@ -165,50 +166,44 @@ public:
     [[nodiscard]] float    GetSoftPos_One()       const { return Ecd2One(GetSoftPos_Ecd()); }
 
 
-private:
+// private:
     static int16_t  PackStsData(uint8_t L, uint8_t H);
     static uint16_t ConvertStsData(uint16_t s);
     static bool     IsLowByteRegister(REG reg);
-    static int16_t  Rad2Ecd(const float v) { return static_cast<int16_t>(USER_1_2PI * Rad2Round(v) * ENCODER_RESOLUTION); }
+    static int16_t  Rad2Ecd(const float v) { return static_cast<int16_t>(Rad2Round(v) * ENCODER_RESOLUTION); }
     static float    Ecd2Rad(const int16_t v) { return Round2Rad(v) / static_cast<float>(ENCODER_RESOLUTION); }
 
     [[nodiscard]] float Ecd2One(const int16_t v) const { return Map(v, soft_min_pos_ecd_, soft_max_pos_ecd_, 0.0f, 1.0f); }
     [[nodiscard]] int16_t One2Ecd(const float v) const { return static_cast<int16_t>(Map(v, 0.0f, 1.0f, soft_min_pos_ecd_, soft_max_pos_ecd_)); }
 
-    const uint16_t zero_point_ecd_;
-    const uint16_t min_pos_ecd_; const int16_t soft_min_pos_ecd_;
-    const uint16_t max_pos_ecd_; const int16_t soft_max_pos_ecd_;
-    const bool is_reversed_;
-
     uint8_t ID_;
-    uint8_t read_reg_l_ = 0xFF, read_reg_h_ = 0x00;
-    uint8_t write_reg_l = 0xFF, write_reg_h_ = 0x00;
-    uint8_t status_ = 0;
-    bool error_ = false;
-    bool is_param_set_ = false;
-    bool received_pack_ = false;
-    bool callback_ready_ = true;
+    const bool is_reversed_;
+    const uint16_t zero_point_ecd_;
+    uint16_t min_pos_ecd_;  int16_t soft_min_pos_ecd_;
+    uint16_t max_pos_ecd_;  int16_t soft_max_pos_ecd_;
 
-    uint16_t pos_ecd_ = 0;
-    uint16_t vel_ecd_ = 0;
+    uint8_t status_ = 0;
+    uint16_t pos_ecd_ = 0;  int16_t soft_pos_ecd = 0;
+    uint16_t vel_ecd_ = 0;  int16_t soft_vel_ecd = 0;
     int16_t load_ecd_ = 0;
     uint8_t volt_ecd_ = 0;
     uint8_t temp_ecd_ = 0;
     int16_t cur_ecd_ = 0;
 
-    int16_t soft_pos_ecd = 0;
-    int16_t soft_vel_ecd = 0;
+    uint16_t target_vel_ecd_ = 2048;    int16_t soft_target_vel_ecd_ = 2048;
+    uint16_t target_pos_ecd_ = 0;       int16_t soft_target_pos_ecd_ = 0;
 
-    uint16_t target_vel_ecd_ = 2048;
-    uint16_t target_pos_ecd_ = 0;
-
-    int16_t soft_target_vel_ecd_ = 2048;
-    int16_t soft_target_pos_ecd_ = 0;
+    uint8_t read_reg_l_ = 0xFF, read_reg_h_ = 0x00;
+    uint8_t write_reg_l = 0xFF, write_reg_h_ = 0x00;
+    bool error_ = false;
+    bool is_param_set_ = false;
+    bool received_pack_ = false;
+    bool callback_ready_ = true;
 
     uint8_t rx_buffer_[MAX_BUF_LEN] = {};
 
     static inline uint8_t motors_count_ = 0;
-    static inline cMotorSts* motors_[MAX_MOTORS_COUNT];
-    static inline uint8_t motors_idx_[MAX_MOTORS_ID + 1] = {};
+    static inline MotorSts* motors_[MAX_MOTORS_COUNT];
+    static inline uint8_t motors_idx_[MAX_MOTOR_ID + 1] = {};
 };
 
