@@ -7,14 +7,21 @@
 #include <cmath>
 #include <array>
 
+/// 限幅
+template <typename T>
+[[nodiscard]] constexpr T Clamp(const T value, const T min, const T max)
+{
+    return std::max(min, std::min(value, max));
+}
+
 /// target是否在num1和num2之间，区间会往两边扩tolerance以适配误差
-template<typename T>
+template <typename T>
 [[nodiscard]] constexpr bool IsBetween(const T target, const T num1, const T num2, const T tolerance)
 {
     return (target >= std::min(num1, num2) - tolerance) && (target <= std::max(num1, num2) + tolerance);
 }
 
-template<std::size_t size>
+template <std::size_t size>
 void ScaleArray(std::array<float, size>& array, float limit)
 {
     limit = fmaxf(fabsf(limit), 1e-6f);

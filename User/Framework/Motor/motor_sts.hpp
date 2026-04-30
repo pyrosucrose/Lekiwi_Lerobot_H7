@@ -137,11 +137,18 @@ public:
     static void ReadAll(REG s, REG e);
     static void Init();
 
-    void SetTargetPos_Ecd(const int16_t t) { soft_target_pos_ecd_ = t; target_pos_ecd_ = is_reversed_ ? zero_point_ecd_ - t : zero_point_ecd_ + t; is_param_set_ = true; }
-    void SetTargetPos_Rad(const float t)   { SetTargetPos_Ecd(Rad2Ecd(t)); }
-    void SetTargetPos_One(const float t)   { SetTargetPos_Ecd(One2Ecd(t)); }
-    void SetTargetVel_Ecd(const int16_t t) { soft_target_vel_ecd_ = t; target_vel_ecd_ = is_reversed_ ? -t : t; is_param_set_ = true; }
-    void SetTargetVel_Rad(const float t)   { SetTargetVel_Ecd(Rad2Ecd(t)); }
+    void SetTargetPos_Ecd(const int16_t t)
+    {
+        is_param_set_ = true;
+        target_pos_ecd_ =
+            Clamp(static_cast<uint16_t>(is_reversed_ ? zero_point_ecd_ - t : zero_point_ecd_ + t), min_pos_ecd_, max_pos_ecd_);
+        soft_target_pos_ecd_ =
+            Clamp(t, soft_min_pos_ecd_, soft_max_pos_ecd_);
+    }
+    void SetTargetPos_Rad(const float t)    { SetTargetPos_Ecd(Rad2Ecd(t)); }
+    void SetTargetPos_One(const float t)    { SetTargetPos_Ecd(One2Ecd(t)); }
+    void SetTargetVel_Ecd(const int16_t t)  { soft_target_vel_ecd_ = t; target_vel_ecd_ = is_reversed_ ? -t : t; is_param_set_ = true; }
+    void SetTargetVel_Rad(const float t)    { SetTargetVel_Ecd(Rad2Ecd(t)); }
 
     [[nodiscard]] bool IsSafePos_Ecd(const int16_t p) const { return IsBetween(static_cast<int16_t>(is_reversed_ ? -p : p), soft_min_pos_ecd_, soft_max_pos_ecd_, static_cast<int16_t>(10)); }
     [[nodiscard]] bool IsSafePos_Rad(const float p)   const { return IsSafePos_Ecd(Rad2Ecd(p)); }
@@ -170,8 +177,9 @@ public:
     static int16_t  PackStsData(uint8_t L, uint8_t H);
     static uint16_t ConvertStsData(uint16_t s);
     static bool     IsLowByteRegister(REG reg);
-    static int16_t  Rad2Ecd(const float v) { return static_cast<int16_t>(Rad2Round(v) * ENCODER_RESOLUTION); }
-    static float    Ecd2Rad(const int16_t v) { return Round2Rad(v) / static_cast<float>(ENCODER_RESOLUTION); }
+    void ClampPos() { target_pos_ecd_ = Clamp(target_pos_ecd_, min_pos_ecd_, max_pos_ecd_); }
+    [[nodiscard]] static int16_t  Rad2Ecd(const float v) { return static_cast<int16_t>(Rad2Round(v) * ENCODER_RESOLUTION); }
+    [[nodiscard]] static float    Ecd2Rad(const int16_t v) { return Round2Rad(v) / static_cast<float>(ENCODER_RESOLUTION); }
 
     [[nodiscard]] float Ecd2One(const int16_t v) const { return Map(v, soft_min_pos_ecd_, soft_max_pos_ecd_, 0.0f, 1.0f); }
     [[nodiscard]] int16_t One2Ecd(const float v) const { return static_cast<int16_t>(Map(v, 0.0f, 1.0f, soft_min_pos_ecd_, soft_max_pos_ecd_)); }

@@ -66,12 +66,6 @@ bool Limit(float* value, float min, float max);
     return rad * RAD_TO_RPM;
 }
 
-/// 限幅
-[[nodiscard]] constexpr float Clamp(const float value, const float min, const float max)
-{
-    return std::max(min, std::min(value, max));
-}
-
 /// 步进，将ramp_last以ramp_step的最大步长向target步进
 [[nodiscard]] constexpr float Ramp(const float target, const float ramp_last, const float ramp_step)
 {

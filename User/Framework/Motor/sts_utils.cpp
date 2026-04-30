@@ -70,8 +70,8 @@ bool MotorSts::IsLowByteRegister(const REG reg)
  */
 MotorSts::MotorSts(const uint8_t ID, const uint16_t zero_point, const uint16_t min_angle, const uint16_t max_angle, const bool reversed) :
     ID_(ID), is_reversed_(reversed), zero_point_ecd_(zero_point),
-    min_pos_ecd_(min_angle), soft_min_pos_ecd_(static_cast<int16_t>(min_angle - zero_point)),
-    max_pos_ecd_(max_angle), soft_max_pos_ecd_(static_cast<int16_t>(max_angle - zero_point))
+    min_pos_ecd_(min_angle), soft_min_pos_ecd_(static_cast<int16_t>(reversed ? zero_point - max_angle : min_angle - zero_point)),
+    max_pos_ecd_(max_angle), soft_max_pos_ecd_(static_cast<int16_t>(reversed ? zero_point - min_angle : max_angle - zero_point))
 {
     if (motors_count_ < MAX_MOTORS_COUNT)
     {

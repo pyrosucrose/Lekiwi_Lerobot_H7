@@ -57,9 +57,9 @@ void cArm::GetDataFromRc()
         target_theta += rc_data.GetRcRightVertical() / 100.0f;
     }
 
-    target_x = Clamp(target_x, -200, 300);
-    target_y = Clamp(target_y, -200, 300);
-    target_theta = Clamp(target_theta, -M_PI * 3 / 5, M_PI * 3 / 4);
+    target_x = Clamp(target_x, -200.0f, 300.0f);
+    target_y = Clamp(target_y, -200.0f, 300.0f);
+    target_theta = Clamp(target_theta, -USER_PI * 3.0f / 5.0f, USER_PI * 3.0f / 4.0f);
 }
 
 bool cArm::Solve()

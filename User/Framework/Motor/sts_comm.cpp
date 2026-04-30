@@ -65,7 +65,7 @@ void MotorSts::UnpackAll()
 /**
  * @brief   解析电机数据
  * @details 解包返回帧，并设置标志位
- * @note    用户可选择开启DEBUG_NODE来看其它数据
+ * @note    用户可选择开启DEBUG_MODE来看其它数据
  */
 void MotorSts::UnpackData()
 {
@@ -73,17 +73,18 @@ void MotorSts::UnpackData()
     status_ = rx_buffer_[1]; error_ = status_;  // 错误码处理
 
     const uint8_t param_len = rx_buffer_[0] - 2;
+    bool boundary_flag = false;
     for (uint8_t i = 2, cnt = 0; cnt < param_len; i++, cnt++)
     {
         switch(static_cast<REG>(read_reg_l_ + cnt))
         {
         case REG::MIN_ANGLE_LIMIT_L:
             min_pos_ecd_ = PackStsData(rx_buffer_[i], rx_buffer_[i + 1]);
-            soft_min_pos_ecd_ = static_cast<int16_t>(min_pos_ecd_ - zero_point_ecd_);
+            boundary_flag = true;
             break;
         case REG::MAX_ANGLE_LIMIT_L:
             max_pos_ecd_ = PackStsData(rx_buffer_[i], rx_buffer_[i + 1]);
-            soft_max_pos_ecd_ = static_cast<int16_t>(max_pos_ecd_ - zero_point_ecd_);
+            boundary_flag = true;
             break;
         case REG::NOW_POS_L:
             pos_ecd_  = PackStsData(rx_buffer_[i], rx_buffer_[i + 1]);
@@ -99,6 +100,16 @@ void MotorSts::UnpackData()
         case REG::NOW_CURRENT_L: cur_ecd_  = PackStsData(rx_buffer_[i], rx_buffer_[i + 1]); break;
         default: break;
         }
+        if (boundary_flag)
+        {
+            soft_min_pos_ecd_ = static_cast<int16_t>(is_reversed_ ? zero_point_ecd_ - max_pos_ecd_ : min_pos_ecd_ - zero_point_ecd_);
+            soft_max_pos_ecd_ = static_cast<int16_t>(is_reversed_ ? zero_point_ecd_ - min_pos_ecd_ : max_pos_ecd_ - zero_point_ecd_);
+        }
+
+        read_reg_l_ = 0xFF; read_reg_h_ = 0x00;
+        received_pack_ = false;
+        in_use_ = false;
+        is_unpacking_ = false;
 
         if constexpr (DEBUG_MODE)
         {
@@ -163,10 +174,6 @@ void MotorSts::UnpackData()
             }
         }
     }
-    read_reg_l_ = 0xFF; read_reg_h_ = 0x00;
-    received_pack_ = false;
-    in_use_ = false;
-    is_unpacking_ = false;
 }
 
 
