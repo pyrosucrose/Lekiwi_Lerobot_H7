@@ -6,12 +6,13 @@
 
 // =============================== 调用库 ===============================
 #include "tim.h"
+#include "usartio.hpp"
 namespace Delay
 {
     // =============================== 宏定义区 ===============================
     inline constexpr TIM_HandleTypeDef* delay_handle = &htim13;
     inline constexpr uint8_t FREQ_MHZ = 1;
-    inline constexpr uint16_t MAX_SAFE_TICK = 64000;
+    inline constexpr uint16_t MAX_SAFE_TICK = 60000;
 
     inline constexpr float US_FACTOR = 1.0f / FREQ_MHZ;
     inline constexpr uint32_t MAX_SAFE_US = MAX_SAFE_TICK * US_FACTOR;
@@ -42,16 +43,28 @@ namespace Delay
     {
         if (us == 0) return;
 
-        uint32_t wait_ticks = us * FREQ_MHZ;
-        while (wait_ticks > MAX_SAFE_TICK)
+        uint32_t wait = us * FREQ_MHZ;
+        while (wait > MAX_SAFE_TICK)
         {
-            wait_ticks -= MAX_SAFE_TICK;
+            wait -= MAX_SAFE_TICK;
             const auto start = GetTimeStamp();
-            while (GetTimeStamp() - start < MAX_SAFE_TICK);
+            while (static_cast<uint16_t>(GetTimeStamp() - start) < MAX_SAFE_TICK);
         }
 
         const auto start = GetTimeStamp();
-        while (GetTimeStamp() - start < wait_ticks);
+        while (static_cast<uint16_t>(GetTimeStamp() - start) < wait);
+    }
+
+    inline void DelayUntil_us(uint16_t* const s, const uint16_t us)
+    {
+        if (!s) return;
+
+        const auto start = GetTimeStamp();
+        const uint16_t wait = *s - start + us * FREQ_MHZ;
+
+        while (static_cast<uint16_t>(GetTimeStamp() - start) < wait) {}
+
+        *s = GetTimeStamp();
     }
 
     inline void Delay_ms(uint32_t ms)

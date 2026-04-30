@@ -15,7 +15,7 @@ void User_Init()
     Usartio_Init();
     Buzzer::Init();
     Delay::Init();
-    // MotorSts::Init();
+    MotorSts::Init();
     TASK_StartInit();
 }
 
@@ -23,13 +23,18 @@ void User_Init()
 {
     BSP_Init();
     Buzzer::SetTone(0);
+    auto s = Delay::GetTimeStamp();
     while (true)
     {
-        auto s = Delay::GetTimeStamp();
-        Delay::Delay_ms(5);
-        // HAL_Delay(1);
+        // Delay::Delay_ms(1000);
+        // usart_printf("11234567\n");
+        // usart_printf("11234567\n");
+        // usart_printf("11234567\n");
+        // usart_printf("11234567\n");
+        // usart_printf("11234567\n");
+        Delay::DelayUntil_us(&s,50000);
         // for (volatile uint32_t i = 0; i < 1000000; ++i){}
-        usart_printf("%f\n",Delay::CalculateInterval_us(s));
+        // usart_printf("%f\n",Delay::CalculateInterval_us(s));
     }
 }
 
