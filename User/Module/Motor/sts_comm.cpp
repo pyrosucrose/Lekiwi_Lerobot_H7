@@ -41,7 +41,7 @@ void MotorSts::RxCallback(const uint8_t* data)
             Crash();
         if (data[3] - 2 > 0)
         {
-            motors_[motors_idx_[ID]]->received_pack_ = true;        // 但仍需将标志位置1防止死锁 ↓
+            motors_[motors_idx_[ID]]->received_pack_ = true;        // 但仍需将标志位置1防止死循环 ↓
             if (motors_[motors_idx_[ID]]->is_unpacking_) return;    // 若处理回调时则不拷贝防止数据错乱
             memcpy(motors_[motors_idx_[ID]]->rx_buffer_, &data[3], data[3]);
         }
@@ -250,19 +250,19 @@ void MotorSts::TransmitReadCommand()
     if (in_use_) return;
 
     uint8_t idx = 0;
-    uart_sts_tx_buffer[idx++] = 0xFF;                   // TxHeader1
-    uart_sts_tx_buffer[idx++] = 0xFF;                   // TxHeader2
-    uart_sts_tx_buffer[idx++] = ID_;                    // ID
-    uart_sts_tx_buffer[idx++] = Special::DUMMY;         // Reserved
-    uart_sts_tx_buffer[idx++] = Command::READ;          // Command
-    uart_sts_tx_buffer[idx++] = cmd_l_;                 // RegStart
-    uart_sts_tx_buffer[idx++] = cmd_h_ - cmd_l_ + 1;    // RegLength
-    uart_sts_tx_buffer[3] = idx - 3;                    // FrameLength
+    uart_sts_tx_buffer[idx++] = 0xFF;                       // TxHeader1
+    uart_sts_tx_buffer[idx++] = 0xFF;                       // TxHeader2
+    uart_sts_tx_buffer[idx++] = ID_;                        // ID
+    uart_sts_tx_buffer[idx++] = Special::DUMMY;             // Reserved for FrameLen
+    uart_sts_tx_buffer[idx++] = Command::READ;              // Command
+    uart_sts_tx_buffer[idx++] = cmd_l_;                     // RegStart
+    uart_sts_tx_buffer[idx++] = cmd_h_ - cmd_l_ + 1;        // RegLength
+    uart_sts_tx_buffer[3] = idx - 3;                        // FrameLength
 
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < idx; i++)
         check_sum += uart_sts_tx_buffer[i];
-    uart_sts_tx_buffer[idx++] = ~check_sum;             // CheckSum
+    uart_sts_tx_buffer[idx++] = ~check_sum;                 // CheckSum
 
     if (HAL_UART_Transmit_DMA(&huart_sts, uart_sts_tx_buffer, idx) == HAL_OK)
     {
@@ -276,28 +276,28 @@ void MotorSts::TransmitReadCommand()
 
 /**
  * @brief   对电机执行一次性写指令
- * @param   reg: 需要写入的寄存器地址
- * @param   val: 写入的值
+ * @param   r: 需要写入的寄存器地址
+ * @param   v: 写入的值
  * @warning 只有需要写入的寄存器是某个16位值的低8位时才能传入>255的数据，否则崩溃
  *          - 如果你真需要利用低位截断的话，在传入时static_cast<uint8_t>(val)
  */
-void MotorSts::TransmitWriteCommand(const REG reg, uint16_t val) const
+void MotorSts::TransmitWriteCommand(const REG r, uint16_t v) const
 {
-    const auto is_low_byte_reg = IsLowByteRegister(reg);
-    if (!is_low_byte_reg && (val & 0xFF00) != 0) Crash();   // 传参错误直接跟你爆了(
-    val = ConvertStsData(val);
+    const auto is_low_byte_reg = IsLowByteReg(r);
+    if (!is_low_byte_reg && (v & 0xFF00) != 0) Crash();     // 传参错误直接跟你爆了(
+    v = ConvertStsData(v);
 
     uint8_t idx = 0;
     uart_sts_tx_buffer[idx++] = 0xFF;                       // TxHeader1
     uart_sts_tx_buffer[idx++] = 0xFF;                       // TxHeader2
     uart_sts_tx_buffer[idx++] = ID_;                        // ID
-    uart_sts_tx_buffer[idx++] = Special::DUMMY;             // Reserved
+    uart_sts_tx_buffer[idx++] = Special::DUMMY;             // Reserved for FrameLen
     uart_sts_tx_buffer[idx++] = Command::WRITE;             // Command
-    uart_sts_tx_buffer[idx++] = static_cast<uint8_t>(reg);  // RegStart
-    uart_sts_tx_buffer[idx++] = val;                        // SetValue
+    uart_sts_tx_buffer[idx++] = static_cast<uint8_t>(r);    // RegStart
+    uart_sts_tx_buffer[idx++] = v;                          // SetValue
     if (is_low_byte_reg)
-        uart_sts_tx_buffer[idx++] = val >> 8;
-    uart_sts_tx_buffer[3] = idx - 3;                        // FrameLength
+        uart_sts_tx_buffer[idx++] = v >> 8;
+    uart_sts_tx_buffer[3] = idx - 3;                        // FrameLen
 
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < idx; i++)
@@ -315,13 +315,13 @@ void MotorSts::TransmitWriteCommand(const REG reg, uint16_t val) const
 void MotorSts::ControlAll()
 {
     uint8_t idx = 0;
-    uart_sts_tx_buffer[idx++] = 0xFF;
-    uart_sts_tx_buffer[idx++] = 0xFF;
-    uart_sts_tx_buffer[idx++] = Special::MASTER_ID;
-    uart_sts_tx_buffer[idx++] = Special::DUMMY; // Reserved
-    uart_sts_tx_buffer[idx++] = Command::SYN_WRITE;
-    uart_sts_tx_buffer[idx++] = static_cast<uint8_t>(REG::TARGET_POSITION_L);
-    uart_sts_tx_buffer[idx++] = 0x06;
+    uart_sts_tx_buffer[idx++] = 0xFF;                       // TxHeader1
+    uart_sts_tx_buffer[idx++] = 0xFF;                       // TxHeader2
+    uart_sts_tx_buffer[idx++] = Special::MASTER_ID;         // ID
+    uart_sts_tx_buffer[idx++] = Special::DUMMY;             // Reserved for FrameLen
+    uart_sts_tx_buffer[idx++] = Command::SYN_WRITE;         // Command
+    uart_sts_tx_buffer[idx++] = static_cast<uint8_t>(REG::TARGET_POSITION_L); // RegStart
+    uart_sts_tx_buffer[idx++] = 0x06;                       // DataLen
 
     for (uint8_t i = 0; i < motors_count_; i++)
     {
@@ -339,7 +339,7 @@ void MotorSts::ControlAll()
         uart_sts_tx_buffer[idx++] = val2;
         uart_sts_tx_buffer[idx++] = val2 >> 8;
     }
-    uart_sts_tx_buffer[3] = idx - 3;                          // FrameLength
+    uart_sts_tx_buffer[3] = idx - 3;                        // FrameLen
 
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < idx; i++)
@@ -364,20 +364,20 @@ void MotorSts::ReadAll(REG s, REG e)
     const auto h = static_cast<uint8_t>(e);
     if (l > h) return;
     uint8_t idx = 0;
-    uart_sts_tx_buffer[idx++] = 0xFF;
-    uart_sts_tx_buffer[idx++] = 0xFF;
-    uart_sts_tx_buffer[idx++] = Special::MASTER_ID;
-    uart_sts_tx_buffer[idx++] = Special::DUMMY; // Reserved
-    uart_sts_tx_buffer[idx++] = Command::SYN_READ;
-    uart_sts_tx_buffer[idx++] = l;
-    uart_sts_tx_buffer[idx++] = h - l + 1;
+    uart_sts_tx_buffer[idx++] = 0xFF;                       // TxHeader1
+    uart_sts_tx_buffer[idx++] = 0xFF;                       // TxHeader2
+    uart_sts_tx_buffer[idx++] = Special::MASTER_ID;         // ID
+    uart_sts_tx_buffer[idx++] = Special::DUMMY;             // Reserved for FrameLen
+    uart_sts_tx_buffer[idx++] = Command::SYN_READ;          // Command
+    uart_sts_tx_buffer[idx++] = l;                          // RegStart
+    uart_sts_tx_buffer[idx++] = h - l + 1;                  // DataLen
     for (uint8_t i = 0; i < motors_count_; i++)
     {
         if (motors_[i]->in_use_) continue;
         motors_[i]->SetReadRange(s, e);
         uart_sts_tx_buffer[idx++] = motors_[i]->ID_;
     }
-    uart_sts_tx_buffer[3] = idx - 3;                          // FrameLength
+    uart_sts_tx_buffer[3] = idx - 3;                        // FrameLen
 
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < idx; i++)
@@ -393,6 +393,46 @@ void MotorSts::ReadAll(REG s, REG e)
             motors_[i]->cmd_h_ = 0x00;
             motors_[i]->cmd_l_ = 0xFF;
         }
+}
+
+/**
+ * @brief   对电机执行批量写指令
+ * @param   r: 需要写入的寄存器地址
+ * @param   v: 写入的值
+ * @note    暂时无法屏蔽某个电机
+ * @warning 只有需要写入的寄存器是某个16位值的低8位时才能传入>255的数据，否则崩溃
+ *          - 如果你真需要利用低位截断的话，在传入时static_cast<uint8_t>(val)
+ */
+void MotorSts::WriteAll(const REG r, uint16_t v)
+{
+    const auto is_low_byte_reg = IsLowByteReg(r);
+    if (!is_low_byte_reg && (v & 0xFF00) != 0) Crash();     // 传参错误直接跟你爆了(
+    v = ConvertStsData(v);
+
+    uint8_t idx = 0;
+    uart_sts_tx_buffer[idx++] = 0xFF;                       // TxHeader1
+    uart_sts_tx_buffer[idx++] = 0xFF;                       // TxHeader2
+    uart_sts_tx_buffer[idx++] = Special::MASTER_ID;         // ID
+    uart_sts_tx_buffer[idx++] = Special::DUMMY;             // Reserved for FrameLen
+    uart_sts_tx_buffer[idx++] = Command::SYN_WRITE;         // Command
+    uart_sts_tx_buffer[idx++] = static_cast<uint8_t>(r);    // RegStart
+    uart_sts_tx_buffer[idx++] = 1 + is_low_byte_reg;        // DataLen
+
+    for (uint8_t i = 0; i < motors_count_; i++)
+    {
+        uart_sts_tx_buffer[idx++] = motors_[i]->ID_;
+        uart_sts_tx_buffer[idx++] = v;
+        if (is_low_byte_reg)
+            uart_sts_tx_buffer[idx++] = v >> 8;
+    }
+    uart_sts_tx_buffer[3] = idx - 3;                        // FrameLen
+
+    uint8_t check_sum = 0;
+    for (uint8_t i = 2; i < idx; i++)
+        check_sum += uart_sts_tx_buffer[i];
+    uart_sts_tx_buffer[idx++] = ~check_sum;                 // CheckSum
+
+    HAL_UART_Transmit_DMA(&huart_sts, uart_sts_tx_buffer, idx);
 }
 
 /**

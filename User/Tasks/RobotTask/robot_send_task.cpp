@@ -8,7 +8,6 @@
 #include "delay.hpp"
 #include "FreeRTOS.h"
 #include "task.h"
-#include "remote.hpp"
 #include "robot.hpp"
 #include "usartio.hpp"
 
@@ -26,6 +25,13 @@ void RobotSendTask(void *pv)
     {
         // auto s = Delay::GetTimeStamp();
         robot_lekiwi.SendControl();
+        // usart_printf("%d,%d,%d,%d,%d\n",
+        //     MotorSts::motors_[5]->zero_point_ecd_,
+        //     MotorSts::motors_[5]->min_pos_ecd_,
+        //     MotorSts::motors_[5]->max_pos_ecd_,
+        //     MotorSts::motors_[5]->soft_min_pos_ecd_,
+        //     MotorSts::motors_[5]->soft_max_pos_ecd_
+        //     );
         // MotorSts::ReadAll(MotorSts::REG::NOW_POS_L, MotorSts::REG::NOW_TEMP);
         // usart_printf("%f\n",Delay::CalculateInterval_us(s));
         // usart_printf("%d,%d,%d,%d,%d,%d,%d,%d,%d\n",

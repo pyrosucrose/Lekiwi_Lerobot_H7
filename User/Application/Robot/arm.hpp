@@ -13,11 +13,11 @@
 // =============================== 函数声明 ===============================
 
 // =============================== 类声明 ===============================
-class cArm
+class LekiwiArm
 {
-    friend class cRobot;
+    friend class RobotLekiwi;
 public:
-    cArm() :
+    LekiwiArm() :
         motors{
         // 从臂
         {1,2035,720,3440,true},

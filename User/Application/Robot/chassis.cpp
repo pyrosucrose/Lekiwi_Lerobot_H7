@@ -14,7 +14,7 @@
 // =============================== 变量区 ==================================
 
 // =============================== 函数实现 ===============================
-void cChassis::GetDataFromRc()
+void LekiwiChassis::GetDataFromRc()
 {
     if (rc_data.GetRcSwitchA() == HIGH && rc_data.GetRcSwitchB() == HIGH)
     {
@@ -35,16 +35,16 @@ void cChassis::GetDataFromRc()
     }
 }
 
-void cChassis::SolveWheelSpeed()
+void LekiwiChassis::SolveWheelSpeed()
 {
     target_wheel_speed[0] = target_speed[Z] - target_speed[X];
     target_wheel_speed[1] = target_speed[Z] + target_speed[X] * 0.5f - target_speed[Y] * (sqrtf(3.0f) / 2);
     target_wheel_speed[2] = target_speed[Z] + target_speed[X] * 0.5f + target_speed[Y] * (sqrtf(3.0f) / 2);
     for (uint8_t i = 0; i < 3; i++)
-        motors[i].SetTargetVel_Ecd(static_cast<int16_t>(target_wheel_speed[i]));
+        motors[i].SetSoftTargetVel_Ecd(static_cast<int16_t>(target_wheel_speed[i]));
 }
 
-void cChassis::TransmitBusControlCmd()
+void LekiwiChassis::TransmitBusControlCmd()
 {
     uint8_t idx = 0;
     uart_sts_tx_buffer[idx++] = 0xFF;
@@ -74,7 +74,7 @@ void cChassis::TransmitBusControlCmd()
     HAL_UART_Transmit_DMA(&huart_sts, uart_sts_tx_buffer, idx);
 }
 
-void cChassis::DisableAll()
+void LekiwiChassis::DisableAll()
 {
     uint8_t idx = 0;
     uart_sts_tx_buffer[idx++] = 0xFF;
@@ -88,7 +88,7 @@ void cChassis::DisableAll()
     for (const auto& motor : motors)
     {
         uart_sts_tx_buffer[idx++] = motor.GetID();
-        uart_sts_tx_buffer[idx++] = 0;
+        uart_sts_tx_buffer[idx++] = MotorSts::TorqueSwitch::OFF;
     }
     uart_sts_tx_buffer[3] = idx - 3;                          // FrameLength
 
@@ -101,7 +101,7 @@ void cChassis::DisableAll()
     HAL_UART_Transmit_DMA(&huart_sts, uart_sts_tx_buffer, idx);
 }
 
-void cChassis::ControlLoop()
+void LekiwiChassis::ControlLoop()
 {
     if (rc_data.IsRcOnline())
     {

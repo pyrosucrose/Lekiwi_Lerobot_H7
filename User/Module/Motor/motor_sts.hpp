@@ -16,8 +16,9 @@
 // =============================== 类声明 ===============================
 class MotorSts
 {
-    friend class cArm;
-    friend class cChassis;
+    friend class LekiwiArm;         // TODO 完工后去掉
+    friend class LekiwiChassis;     // TODO 完工后去掉
+
     static constexpr uint8_t MAX_MOTOR_ID = 0xFD;
     static constexpr uint8_t MAX_MOTORS_COUNT = 20;
     static constexpr uint8_t MAX_BUF_LEN = 32;
@@ -27,22 +28,23 @@ class MotorSts
 public:
     typedef enum : uint8_t
     {
-        PING        = 0x01,
-        READ        = 0x02,
-        WRITE       = 0x03,
-        RESET       = 0x06,
-        ASYN_WRITE  = 0x04,
-        ASYN_ACTION = 0x05,
-        SYN_READ    = 0x82,
-        SYN_WRITE   = 0x83,
+        PING        = 0x01, // 查询电机状态
+        READ        = 0x02, // 读电机寄存器值
+        WRITE       = 0x03, // 写入电机寄存器
+        RESET       = 0x06, // 重置寄存器
+        ASYN_WRITE  = 0x04, // 异步写写入
+        ASYN_ACTION = 0x05, // 异步写执行
+        SYN_READ    = 0x82, // 同步读
+        SYN_WRITE   = 0x83, // 同步写
     } Command;
 
     typedef enum : uint8_t
     {
-        DUMMY       = 0x00,
-        MASTER_ID   = 0xFE,
-        ILLEGAL_ID  = 0xFF,
-    } Special;
+        OFF         = 0,    // 失能电机
+        ON          = 1,    // 使能电机
+        DAMPING     = 2,    // 阻尼输出(被动模式)
+        SET_2048    = 128,  // 设置当前位置为编码器2048点(二义性?!)
+    } TorqueSwitch;
 
     enum class REG : uint8_t
     {
@@ -117,6 +119,15 @@ public:
         NOW_CURRENT_H            = 0x46, // R
     };
 
+private:
+    typedef enum : uint8_t
+    {
+        DUMMY       = 0x00, // 占位符
+        MASTER_ID   = 0xFE, // 广播ID
+        ILLEGAL_ID  = 0xFF, // 填充ID用，不可能是正常的电机ID
+    } Special;
+
+public:
     MotorSts(uint8_t ID, uint16_t zero_point, uint16_t min_angle, uint16_t max_angle, bool reversed = false);
     ~MotorSts();
 
@@ -125,16 +136,17 @@ public:
     void AddReadRange(REG s, REG e);
     void SetReadRange(REG s, REG e);
     void TransmitReadCommand();
-    void TransmitWriteCommand(REG reg, uint16_t val) const;
+    void TransmitWriteCommand(REG r, uint16_t v) const;
     void UnpackData();
 
     static void RxCallback(const uint8_t* data);
     static void UnpackAll();
     static void ControlAll();
     static void ReadAll(REG s, REG e);
+    static void WriteAll(REG r, uint16_t v);
     static void Init();
 
-    void SetTargetPos_Ecd(const int16_t t)
+    void SetSoftTargetPos_Ecd(const int16_t t)
     {
         is_param_set_ = true;
         target_pos_ecd_ =
@@ -142,10 +154,10 @@ public:
         soft_target_pos_ecd_ =
             Clamp(t, soft_min_pos_ecd_, soft_max_pos_ecd_);
     }
-    void SetTargetPos_Rad(const float t)    { SetTargetPos_Ecd(Rad2Ecd(t)); }
-    void SetTargetPos_One(const float t)    { SetTargetPos_Ecd(One2Ecd(t)); }
-    void SetTargetVel_Ecd(const int16_t t)  { soft_target_vel_ecd_ = t; target_vel_ecd_ = is_reversed_ ? -t : t; is_param_set_ = true; }
-    void SetTargetVel_Rad(const float t)    { SetTargetVel_Ecd(Rad2Ecd(t)); }
+    void SetSoftTargetPos_Rad(const float t)    { SetSoftTargetPos_Ecd(Rad2Ecd(t)); }
+    void SetSoftTargetPos_One(const float t)    { SetSoftTargetPos_Ecd(One2Ecd(t)); }
+    void SetSoftTargetVel_Ecd(const int16_t t)  { soft_target_vel_ecd_ = t; target_vel_ecd_ = is_reversed_ ? -t : t; is_param_set_ = true; }
+    void SetSoftTargetVel_Rad(const float t)    { SetSoftTargetVel_Ecd(Rad2Ecd(t)); }
 
     [[nodiscard]] bool IsSafePos_Ecd(const int16_t p) const { return IsBetween(static_cast<int16_t>(is_reversed_ ? -p : p), soft_min_pos_ecd_, soft_max_pos_ecd_, static_cast<int16_t>(10)); }
     [[nodiscard]] bool IsSafePos_Rad(const float p)   const { return IsSafePos_Ecd(Rad2Ecd(p)); }
@@ -170,10 +182,10 @@ public:
     [[nodiscard]] float    GetSoftPos_One()       const { return Ecd2One(GetSoftPos_Ecd()); }
 
 
-// private:
+private:
     static int16_t  PackStsData(uint8_t L, uint8_t H);
     static uint16_t ConvertStsData(uint16_t s);
-    static bool     IsLowByteRegister(REG reg);
+    static bool     IsLowByteReg(REG reg);
     void ClampPos() { target_pos_ecd_ = Clamp(target_pos_ecd_, min_pos_ecd_, max_pos_ecd_); }
     [[nodiscard]] static int16_t  Rad2Ecd(const float v) { return static_cast<int16_t>(Rad2Round(v) * ENCODER_RESOLUTION); }
     [[nodiscard]] static float    Ecd2Rad(const int16_t v) { return Round2Rad(v) / static_cast<float>(ENCODER_RESOLUTION); }
@@ -194,21 +206,21 @@ public:
     uint8_t temp_ecd_ = 0;
     int16_t cur_ecd_ = 0;
 
-    uint16_t target_vel_ecd_ = 32767;    int16_t soft_target_vel_ecd_ = 32767;
+    uint16_t target_vel_ecd_ = 32767;   int16_t soft_target_vel_ecd_ = 32767;
     uint16_t target_pos_ecd_ = 0;       int16_t soft_target_pos_ecd_ = 0;
 
-    uint8_t cmd_l_ = 0xFF, cmd_h_ = 0x00;
-    uint8_t ack_l_ = 0xFF, ack_h_ = 0x00;
+    uint8_t cmd_l_ = 0xFF, cmd_h_ = 0x00;   // 设置读取寄存器时被置位，读取指令发送时被复位
+    uint8_t ack_l_ = 0xFF, ack_h_ = 0x00;   // 读取指令发送时被上面的置位，解析完成后被复位
     uint8_t status_ = 0;
     bool error_ = false;
-    bool is_param_set_ = false;
-    bool received_pack_ = false;
-    bool in_use_ = false;
-    bool is_unpacking_ = false;     // 开始解包时置为true来屏蔽中断回调写入数据
+    bool is_param_set_ = false;     // 设置参数时置为true以被ControlAll调用发送
+    bool received_pack_ = false;    // 有匹配该ID的回调来时置为true以执行Unpack指令(即使未成功写入也会置位防止卡死)
+    bool in_use_ = false;           // 发送读指令后置为true以防止回调完成之前被再次执行读指令
+    bool is_unpacking_ = false;     // 开始解包时置为true以阻止中断回调写入数据
 
     uint8_t rx_buffer_[MAX_BUF_LEN] = {};
 
-    static inline uint8_t motors_count_ = 0;
-    static inline MotorSts* motors_[MAX_MOTORS_COUNT] = {};
-    static inline uint8_t motors_idx_[MAX_MOTOR_ID + 1] = {};
+    static inline uint8_t motors_count_ = 0;                    // 电机数量，构造与析构时被修改
+    static inline MotorSts* motors_[MAX_MOTORS_COUNT] = {};     // 静态电机列表，负责维护并批量处理所有电机
+    static inline uint8_t motors_idx_[MAX_MOTOR_ID + 1] = {};   // 电机ID索引列表，记录每个ID的电机在motors_中的索引(没错，有相同ID的电机的话就是UB)
 };

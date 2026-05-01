@@ -12,7 +12,7 @@
 // =============================== 变量区 ==================================
 
 // =============================== 函数实现 ===============================
-void cRobot::ControlLoop()
+void RobotLekiwi::ControlLoop()
 {
     if (rc_data.IsRcOnline())
     // if (false)
@@ -31,7 +31,7 @@ void cRobot::ControlLoop()
     }
 }
 
-void cRobot::SendControl()
+void RobotLekiwi::SendControl()
 {
     static bool read_motor_info = false;
     read_motor_info = !read_motor_info;
@@ -48,11 +48,12 @@ void cRobot::SendControl()
         }
         else
         {
-            static bool to_arm = true; to_arm = !to_arm;
-            if (to_arm)
-                arm.DisableAll();
-            else
-                chassis.DisableAll();
+            MotorSts::WriteAll(MotorSts::REG::TORQUE_SWITCH, MotorSts::TorqueSwitch::OFF);
+        //     static bool to_arm = true; to_arm = !to_arm;
+        //     if (to_arm)
+        //         arm.DisableAll();
+        //     else
+        //         chassis.DisableAll();
         }
     }
 

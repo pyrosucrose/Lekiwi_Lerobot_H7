@@ -14,15 +14,15 @@
 
 // =============================== 类声明 ===============================
 
-class cRobot
+class RobotLekiwi
 {
 public:
     void ControlLoop();
     void SendControl();
 
-    cArm arm;
-    cChassis chassis;
+    LekiwiArm arm;
+    LekiwiChassis chassis;
 
 };
 
-inline cRobot robot_lekiwi;
+inline RobotLekiwi robot_lekiwi;

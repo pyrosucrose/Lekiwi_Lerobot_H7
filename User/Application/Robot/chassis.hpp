@@ -15,11 +15,11 @@
 
 // =============================== 类声明 ===============================
 
-class cChassis
+class LekiwiChassis
 {
-    friend class cRobot;
+    friend class RobotLekiwi;
 public:
-    cChassis():
+    LekiwiChassis():
         motors
         {
         {8,0,0,0,true},

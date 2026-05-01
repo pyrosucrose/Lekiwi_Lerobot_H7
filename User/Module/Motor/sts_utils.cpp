@@ -44,7 +44,7 @@ uint16_t MotorSts::ConvertStsData(const uint16_t s)
  * @param   reg:寄存器地址
  * @retval  是不是
  */
-bool MotorSts::IsLowByteRegister(const REG reg)
+bool MotorSts::IsLowByteReg(const REG reg)
 {
     return reg == REG::TARGET_POSITION_L ||
            reg == REG::TARGET_SPEED_L ||

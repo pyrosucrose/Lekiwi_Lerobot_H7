@@ -13,7 +13,7 @@
 // =============================== 变量区 ==================================
 
 // =============================== 函数实现 ===============================
-void cArm::GetDataFromRc()
+void LekiwiArm::GetDataFromRc()
 {
     target_x_last = target_x;
     target_y_last = target_y;
@@ -62,7 +62,7 @@ void cArm::GetDataFromRc()
     target_theta = Clamp(target_theta, -USER_PI * 3.0f / 5.0f, USER_PI * 3.0f / 4.0f);
 }
 
-bool cArm::Solve()
+bool LekiwiArm::Solve()
 {
     const float X = target_x;// - l3 * cosf(target_theta);
     const float Y = target_y;// - l3 * sinf(target_theta);
@@ -86,34 +86,34 @@ bool cArm::Solve()
     const float c1 = Round_v(target_theta - beta_1, 2 * M_PI);
     const float c2 = Round_v(target_theta - beta_2, 2 * M_PI);
 
-    motors[0].SetTargetPos_Rad(target_yaw_);
+    motors[0].SetSoftTargetPos_Rad(target_yaw_);
     if (motors[1].IsSafePos_Rad(a1) && motors[2].IsSafePos_Rad(b1) && motors[3].IsSafePos_Rad(c1))
     {
-        motors[1].SetTargetPos_Rad(a1);
-        motors[2].SetTargetPos_Rad(b1);
-        motors[3].SetTargetPos_Rad(c1);
-        motors[4].SetTargetPos_One(target_wrist);
-        motors[5].SetTargetPos_One(target_gripper);
+        motors[1].SetSoftTargetPos_Rad(a1);
+        motors[2].SetSoftTargetPos_Rad(b1);
+        motors[3].SetSoftTargetPos_Rad(c1);
+        motors[4].SetSoftTargetPos_One(target_wrist);
+        motors[5].SetSoftTargetPos_One(target_gripper);
         return true;
     }
     if (motors[1].IsSafePos_Rad(a2) && motors[2].IsSafePos_Rad(b2) && motors[3].IsSafePos_Rad(c2))
     {
-        motors[1].SetTargetPos_Rad(a2);
-        motors[2].SetTargetPos_Rad(b2);
-        motors[3].SetTargetPos_Rad(c2);
-        motors[4].SetTargetPos_One(target_wrist);
-        motors[5].SetTargetPos_One(target_gripper);
+        motors[1].SetSoftTargetPos_Rad(a2);
+        motors[2].SetSoftTargetPos_Rad(b2);
+        motors[3].SetSoftTargetPos_Rad(c2);
+        motors[4].SetSoftTargetPos_One(target_wrist);
+        motors[5].SetSoftTargetPos_One(target_gripper);
         return true;
     }
     return false;
 }
 
-void cArm::SolveEnd()
+void LekiwiArm::SolveEnd()
 {
 
 }
 
-void cArm::DeSolve() const
+void LekiwiArm::DeSolve() const
 {
     const float a = motors[1].GetSoftPos_Rad();
     const float b = motors[2].GetSoftPos_Rad();
@@ -127,7 +127,7 @@ void cArm::DeSolve() const
     usart_printf("%.1f,%.1f,%.1f,%.1f,%.1f,%.1f\n",target_x,target_y,Rad2Degree(target_theta),x,y,Rad2Degree(theta));
 }
 
-void cArm::TransmitBusControlCmd()
+void LekiwiArm::TransmitBusControlCmd()
 {
     uint8_t idx = 0;
     uart_sts_tx_buffer[idx++] = 0xFF;
@@ -157,7 +157,7 @@ void cArm::TransmitBusControlCmd()
     HAL_UART_Transmit_DMA(&huart_sts, uart_sts_tx_buffer, idx);
 }
 
-void cArm::DisableAll()
+void LekiwiArm::DisableAll()
 {
     uint8_t idx = 0;
     uart_sts_tx_buffer[idx++] = 0xFF;
@@ -171,7 +171,7 @@ void cArm::DisableAll()
     for (const auto& motor : motors)
     {
         uart_sts_tx_buffer[idx++] = motor.GetID();
-        uart_sts_tx_buffer[idx++] = 0;
+        uart_sts_tx_buffer[idx++] = MotorSts::TorqueSwitch::OFF;
     }
     uart_sts_tx_buffer[3] = idx - 3;                          // FrameLength
 
@@ -184,7 +184,7 @@ void cArm::DisableAll()
     HAL_UART_Transmit_DMA(&huart_sts, uart_sts_tx_buffer, idx);
 }
 
-void cArm::ControlLoop()
+void LekiwiArm::ControlLoop()
 {
     if (rc_data.IsRcOnline())
     {

@@ -27,13 +27,9 @@ void User_Init()
     while (true)
     {
         // Delay::Delay_ms(1000);
-        // usart_printf("11234567\n");
-        // usart_printf("11234567\n");
-        // usart_printf("11234567\n");
-        // usart_printf("11234567\n");
-        // usart_printf("11234567\n");
+        usart_printf("1\n");
         Delay::DelayUntil_us(&s,50000);
-        // for (volatile uint32_t i = 0; i < 1000000; ++i){}
+        // for (uint32_t i = 0; i < 1000000; i++){}
         // usart_printf("%f\n",Delay::CalculateInterval_us(s));
     }
 }
