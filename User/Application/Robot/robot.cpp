@@ -38,7 +38,7 @@ void cRobot::SendControl()
 
     if (read_motor_info)
     {
-        MotorSts::ReadAll(MotorSts::REG::LOCK, MotorSts::REG::NOW_TEMP);
+        MotorSts::ReadAll(MotorSts::REG::NOW_POS_L, MotorSts::REG::NOW_TEMP);
     }
     else
     {

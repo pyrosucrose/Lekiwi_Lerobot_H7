@@ -21,7 +21,9 @@ void MotorTask(void *pv)
     portTickType current_time = xTaskGetTickCount();
     while (true)
     {
+        // usart_printf("%d",MotorSts::motors_[0]->received_pack_);
         MotorSts::UnpackAll();
-        vTaskDelayUntil(&current_time, pdMS_TO_TICKS(TASK_MOTOR_TASK_PERIOD));       //让任务以 5 毫秒的周期运行
+        // usart_printf("%d\n",MotorSts::motors_[0]->received_pack_);
+        vTaskDelayUntil(&current_time, pdMS_TO_TICKS(TASK_MOTOR_TASK_PERIOD));
     }
 }

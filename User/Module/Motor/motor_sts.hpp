@@ -5,10 +5,7 @@
 #pragma once
 
 // =============================== 调用库 ===============================
-#include <cstdint>
-
 #include "math.hpp"
-#include "motor_sts.hpp"
 
 // =============================== 宏定义区 ===============================
 
@@ -123,7 +120,7 @@ public:
     MotorSts(uint8_t ID, uint16_t zero_point, uint16_t min_angle, uint16_t max_angle, bool reversed = false);
     ~MotorSts();
 
-    void AddReadReg(REG reg);
+    void AddReadReg(REG r);
     void AddReadRangeByCount(REG s, uint8_t c);
     void AddReadRange(REG s, REG e);
     void SetReadRange(REG s, REG e);
@@ -200,8 +197,8 @@ public:
     uint16_t target_vel_ecd_ = 32767;    int16_t soft_target_vel_ecd_ = 32767;
     uint16_t target_pos_ecd_ = 0;       int16_t soft_target_pos_ecd_ = 0;
 
-    uint8_t read_reg_l_ = 0xFF, read_reg_h_ = 0x00;
-    uint8_t write_reg_l = 0xFF, write_reg_h_ = 0x00;
+    uint8_t cmd_l_ = 0xFF, cmd_h_ = 0x00;
+    uint8_t ack_l_ = 0xFF, ack_h_ = 0x00;
     uint8_t status_ = 0;
     bool error_ = false;
     bool is_param_set_ = false;

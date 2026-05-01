@@ -28,18 +28,18 @@ void MotorSts::RxCallback(const uint8_t* data)
 {
     if (data[0] != 0xFF || data[1] != 0xFF) return;   // 数据错乱不处理
 
-    const uint8_t param_len = data[3] - 2;
     uint8_t check_sum = 0;
-    for (uint8_t i = 2; i < param_len + 5; i++)
+    for (uint8_t i = 2; i < data[3] + 3; i++)
         check_sum += data[i];
     check_sum = ~check_sum;
-    if (data[param_len + 5] != check_sum) return;     // 校验和不匹配不处理
+    if (data[data[3] + 3] != check_sum) return;     // 校验和不匹配不处理
 
     if (const uint8_t ID = data[2]; motors_[motors_idx_[ID]])
     {
         if (data[3] >= MAX_BUF_LEN)
+            // 分配的BUF太小，调大 MAX_BUF_LEN
             Crash();
-        if (param_len)
+        if (data[3] - 2 > 0)
         {
             motors_[motors_idx_[ID]]->received_pack_ = true;        // 但仍需将标志位置1防止死锁 ↓
             if (motors_[motors_idx_[ID]]->is_unpacking_) return;    // 若处理回调时则不拷贝防止数据错乱
@@ -47,11 +47,12 @@ void MotorSts::RxCallback(const uint8_t* data)
         }
         return;
     }
+    // 如果没有注销过电机依旧发生，就是代码逻辑有问题，send bug report tks!
     Crash();
 }
 
 /**
- * @brief   解析所有电机的数据
+ * @brief   批量解包
  * @details 对于有新数据返回的电机，调用UnpackData来解析
  * @note    该函数应该在主循环或任务中由用户手动调用
  */
@@ -63,7 +64,7 @@ void MotorSts::UnpackAll()
 }
 
 /**
- * @brief   解析电机数据
+ * @brief   解析电机接收数据
  * @details 解包返回帧，并设置标志位
  * @note    用户可选择开启DEBUG_MODE来看其它数据
  */
@@ -72,11 +73,10 @@ void MotorSts::UnpackData()
     is_unpacking_ = true;
     status_ = rx_buffer_[1]; error_ = status_;  // 错误码处理
 
-    const uint8_t param_len = rx_buffer_[0] - 2;
     bool boundary_flag = false;
-    for (uint8_t i = 2, cnt = 0; cnt < param_len; i++, cnt++)
+    for (uint8_t i = 2, cnt = 0; cnt < rx_buffer_[0] - 2; i++, cnt++)
     {
-        switch(static_cast<REG>(read_reg_l_ + cnt))
+        switch(static_cast<REG>(ack_l_ + cnt))
         {
         case REG::MIN_ANGLE_LIMIT_L:
             min_pos_ecd_ = PackStsData(rx_buffer_[i], rx_buffer_[i + 1]);
@@ -106,14 +106,9 @@ void MotorSts::UnpackData()
             soft_max_pos_ecd_ = static_cast<int16_t>(is_reversed_ ? zero_point_ecd_ - min_pos_ecd_ : max_pos_ecd_ - zero_point_ecd_);
         }
 
-        read_reg_l_ = 0xFF; read_reg_h_ = 0x00;
-        received_pack_ = false;
-        in_use_ = false;
-        is_unpacking_ = false;
-
         if constexpr (DEBUG_MODE)
         {
-            switch(static_cast<REG>(read_reg_l_ + cnt))
+            switch(static_cast<REG>(ack_l_ + cnt))
             {
             // RO(EPROM)
             case REG::FIRMWARE_MAJOR_VERSION:   usart_printf("[0x%02X] firmware major version: 0x%02X\n", ID_, rx_buffer_[i]);                                     break;
@@ -174,81 +169,135 @@ void MotorSts::UnpackData()
             }
         }
     }
+    ack_l_ = 0xFF; ack_h_ = 0x00;
+    received_pack_ = false;
+    in_use_ = false;
+    is_unpacking_ = false;
 }
 
-
-void MotorSts::AddReadReg(const REG reg)
+/**
+ * @brief   添加需要读取的寄存器
+ * @param   r: 寄存器
+ * @note    协议要求读取的寄存器地址必须连续，故函数修改的是需要读取的最小/最大寄存器
+ *          - 比如你只需要读0x20和0x30的寄存器，但发送时必须要求电机返回0x20-0x30的所有寄存器值
+ * @warning 程序不会判断读取操作是否安全(比如只读了一个16bit数据的低8位或读了最大角度限制但没读最小角度限制)，需要用户自己确保
+ */
+void MotorSts::AddReadReg(const REG r)
 {
-    const auto addr = static_cast<uint8_t>(reg);
-    if (addr < read_reg_l_) read_reg_l_ = addr;
-    if (addr > read_reg_h_) read_reg_h_ = addr;
+    const auto reg = static_cast<uint8_t>(r);
+    if (reg < cmd_l_) cmd_l_ = reg;
+    if (reg > cmd_h_) cmd_h_ = reg;
 }
 
+/**
+ * @brief   添加需要读取的寄存器
+ * @param   s: 从哪个寄存器开始读
+ * @param   c: 一共读几个(最少一个)
+ * @note    协议要求读取的寄存器地址必须连续，故函数修改的是需要读取的最小/最大寄存器
+ *          - 比如你只需要读0x20和0x30的寄存器，但发送时必须要求电机返回0x20-0x30的所有寄存器值
+ * @warning 程序不会判断读取操作是否安全(比如只读了一个16bit数据的低8位或读了最大角度限制但没读最小角度限制)，需要用户自己确保
+ */
 void MotorSts::AddReadRangeByCount(const REG s, const uint8_t c)
 {
     if (c == 0) return;
 
-    const auto start = static_cast<uint8_t>(s);
-    const uint8_t end = start + c - 1;
-    if (start < read_reg_l_) read_reg_l_ = start;
-    if (end   > read_reg_h_) read_reg_h_ = end;
+    const auto l = static_cast<uint8_t>(s);
+    const uint8_t h = l + c - 1;
+    if (l < cmd_l_) cmd_l_ = l;
+    if (h > cmd_h_) cmd_h_ = h;
 }
 
+/**
+ * @brief   添加需要读取的寄存器
+ * @param   s: 从哪个寄存器开始读
+ * @param   e: 读到哪个寄存器(包含该寄存器)
+ * @note    协议要求读取的寄存器地址必须连续，故函数修改的是需要读取的最小/最大寄存器
+ *          - 比如你只需要读0x20和0x30的寄存器，但发送时必须要求电机返回0x20-0x30的所有寄存器值
+ * @warning 程序不会判断读取操作是否安全(比如只读了一个16bit数据的低8位或读了最大角度限制但没读最小角度限制)，需要用户自己确保
+ */
 void MotorSts::AddReadRange(const REG s, const REG e)
 {
-    const auto start = static_cast<uint8_t>(s);
-    const auto end = static_cast<uint8_t>(e);
-    if (start > end) return;
-    if (start < read_reg_l_) read_reg_l_ = start;
-    if (end   > read_reg_h_) read_reg_h_ = end;
+    const auto l = static_cast<uint8_t>(s);
+    const auto h = static_cast<uint8_t>(e);
+    if (l > h) return;
+    if (l < cmd_l_) cmd_l_ = l;
+    if (h > cmd_h_) cmd_h_ = h;
 }
 
+/**
+ * @brief   设置需要读取的寄存器
+ * @param   s: 从哪个寄存器开始读
+ * @param   e: 读到哪个寄存器(包含该寄存器)
+ * @warning 程序不会判断读取操作是否安全(比如只读了一个16bit数据的低8位或读了最大角度限制但没读最小角度限制)，需要用户自己确保
+ * @warning 该操作会覆盖上面三个AddRead的操作，若你只是需要添加而不是覆盖，请不要调用这个
+ */
 void MotorSts::SetReadRange(REG s, REG e)
 {
-    read_reg_l_ =  static_cast<uint8_t>(s);
-    read_reg_h_ =  static_cast<uint8_t>(e);
+    cmd_l_ = static_cast<uint8_t>(s);
+    cmd_h_ = static_cast<uint8_t>(e);
 }
 
+/**
+ * @brief   对单个电机执行读指令
+ * @details 将读取指令发送给电机，范围为调用前的范围
+ * @note    函数会清空先前设置的读取范围，若想重新读取必须重新设置
+ * @note    函数会将读取范围写入ack_l/h_中供解析时使用
+ * @note    函数会设置电机为in_use状态，此时只能设置读取范围但不能对电机执行任何读指令
+ */
 void MotorSts::TransmitReadCommand()
 {
-    if (read_reg_h_ < read_reg_l_) return;
+    if (cmd_h_ < cmd_l_) return;
+    if (in_use_) return;
 
     uint8_t idx = 0;
-    uart_sts_tx_buffer[idx++] = 0xFF;                         // TxHeader1
-    uart_sts_tx_buffer[idx++] = 0xFF;                         // TxHeader2
-    uart_sts_tx_buffer[idx++] = ID_;                          // ID
-    uart_sts_tx_buffer[idx++] = Special::DUMMY;               // Reserved
-    uart_sts_tx_buffer[idx++] = Command::READ;                // Command
-    uart_sts_tx_buffer[idx++] = read_reg_l_;                  // RegStart
-    uart_sts_tx_buffer[idx++] = read_reg_h_ - read_reg_l_ + 1;// RegLength
-    uart_sts_tx_buffer[3] = idx - 3;                          // FrameLength
+    uart_sts_tx_buffer[idx++] = 0xFF;                   // TxHeader1
+    uart_sts_tx_buffer[idx++] = 0xFF;                   // TxHeader2
+    uart_sts_tx_buffer[idx++] = ID_;                    // ID
+    uart_sts_tx_buffer[idx++] = Special::DUMMY;         // Reserved
+    uart_sts_tx_buffer[idx++] = Command::READ;          // Command
+    uart_sts_tx_buffer[idx++] = cmd_l_;                 // RegStart
+    uart_sts_tx_buffer[idx++] = cmd_h_ - cmd_l_ + 1;    // RegLength
+    uart_sts_tx_buffer[3] = idx - 3;                    // FrameLength
 
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < idx; i++)
         check_sum += uart_sts_tx_buffer[i];
-    uart_sts_tx_buffer[idx++] = ~check_sum;                   // CheckSum
+    uart_sts_tx_buffer[idx++] = ~check_sum;             // CheckSum
 
     if (HAL_UART_Transmit_DMA(&huart_sts, uart_sts_tx_buffer, idx) == HAL_OK)
+    {
         in_use_ = true;
+        ack_l_ = cmd_l_;
+        ack_h_ = cmd_h_;
+        cmd_h_ = 0x00;
+        cmd_l_ = 0xFF;
+    }
 }
 
+/**
+ * @brief   对电机执行一次性写指令
+ * @param   reg: 需要写入的寄存器地址
+ * @param   val: 写入的值
+ * @warning 只有需要写入的寄存器是某个16位值的低8位时才能传入>255的数据，否则崩溃
+ *          - 如果你真需要利用低位截断的话，在传入时static_cast<uint8_t>(val)
+ */
 void MotorSts::TransmitWriteCommand(const REG reg, uint16_t val) const
 {
-    const auto is_16_bit_reg = IsLowByteRegister(reg);
-    if (!is_16_bit_reg && (val & 0xFF00) != 0) Crash();    // 传参错误直接报错
+    const auto is_low_byte_reg = IsLowByteRegister(reg);
+    if (!is_low_byte_reg && (val & 0xFF00) != 0) Crash();   // 传参错误直接跟你爆了(
     val = ConvertStsData(val);
 
     uint8_t idx = 0;
-    uart_sts_tx_buffer[idx++] = 0xFF;                         // TxHeader1
-    uart_sts_tx_buffer[idx++] = 0xFF;                         // TxHeader2
-    uart_sts_tx_buffer[idx++] = ID_;                          // ID
-    uart_sts_tx_buffer[idx++] = Special::DUMMY;               // Reserved
-    uart_sts_tx_buffer[idx++] = Command::WRITE;               // Command
-    uart_sts_tx_buffer[idx++] = static_cast<uint8_t>(reg);    // RegStart
+    uart_sts_tx_buffer[idx++] = 0xFF;                       // TxHeader1
+    uart_sts_tx_buffer[idx++] = 0xFF;                       // TxHeader2
+    uart_sts_tx_buffer[idx++] = ID_;                        // ID
+    uart_sts_tx_buffer[idx++] = Special::DUMMY;             // Reserved
+    uart_sts_tx_buffer[idx++] = Command::WRITE;             // Command
+    uart_sts_tx_buffer[idx++] = static_cast<uint8_t>(reg);  // RegStart
     uart_sts_tx_buffer[idx++] = val;                        // SetValue
-    if (is_16_bit_reg)
+    if (is_low_byte_reg)
         uart_sts_tx_buffer[idx++] = val >> 8;
-    uart_sts_tx_buffer[3] = idx - 3;                          // FrameLength
+    uart_sts_tx_buffer[3] = idx - 3;                        // FrameLength
 
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < idx; i++)
@@ -258,6 +307,11 @@ void MotorSts::TransmitWriteCommand(const REG reg, uint16_t val) const
     HAL_UART_Transmit_DMA(&huart_sts, uart_sts_tx_buffer, idx);
 }
 
+/**
+ * @brief   批量管理电机，统一写入位置与速度值
+ * @details 遍历已注册的电机，如果电机参数已被设置(速度/位置)，就编辑并发送指令，随后重置标志位
+ * @note    目前未实现PWM电机端开环控制功能，故将那直接置0问题应该也不大
+ */
 void MotorSts::ControlAll()
 {
     uint8_t idx = 0;
@@ -297,19 +351,26 @@ void MotorSts::ControlAll()
             motors_[i]->is_param_set_ = false;
 }
 
+/**
+ * @brief   读取所有电机的参数
+ * @param   s: 起始寄存器地址
+ * @param   e: 结束寄存器地址(包含该值)
+ * @note    该操作同样会覆盖先前设置的寄存器上下界，请留意
+ * @warning 程序不会判断读取操作是否安全(比如只读了一个16bit数据的低8位或读了最大角度限制但没读最小角度限制)，需要用户自己确保
+ */
 void MotorSts::ReadAll(REG s, REG e)
 {
-    const auto start_addr = static_cast<uint8_t>(s);
-    const auto end_addr = static_cast<uint8_t>(e);
-    if (start_addr > end_addr) return;
+    const auto l = static_cast<uint8_t>(s);
+    const auto h = static_cast<uint8_t>(e);
+    if (l > h) return;
     uint8_t idx = 0;
     uart_sts_tx_buffer[idx++] = 0xFF;
     uart_sts_tx_buffer[idx++] = 0xFF;
     uart_sts_tx_buffer[idx++] = Special::MASTER_ID;
     uart_sts_tx_buffer[idx++] = Special::DUMMY; // Reserved
     uart_sts_tx_buffer[idx++] = Command::SYN_READ;
-    uart_sts_tx_buffer[idx++] = start_addr;
-    uart_sts_tx_buffer[idx++] = end_addr - start_addr + 1;
+    uart_sts_tx_buffer[idx++] = l;
+    uart_sts_tx_buffer[idx++] = h - l + 1;
     for (uint8_t i = 0; i < motors_count_; i++)
     {
         if (motors_[i]->in_use_) continue;
@@ -325,9 +386,20 @@ void MotorSts::ReadAll(REG s, REG e)
 
     if (HAL_UART_Transmit_DMA(&huart_sts, uart_sts_tx_buffer, idx) == HAL_OK)
         for (uint8_t i = 0; i < motors_count_; i++)
+        {
             motors_[i]->in_use_ = true;
+            motors_[i]->ack_l_ = motors_[i]->cmd_l_;
+            motors_[i]->ack_h_ = motors_[i]->cmd_h_;
+            motors_[i]->cmd_h_ = 0x00;
+            motors_[i]->cmd_l_ = 0xFF;
+        }
 }
 
+/**
+ * @brief   初始化电机
+ * @details 目前只是读取了所有电机角度的上下界(并会在中断回调中写入)
+ * @note    虽然速控电机不需要上下界参数，但实际读取了也并没有影响(反正是没用的)
+ */
 void MotorSts::Init()
 {
     ReadAll(REG::MIN_ANGLE_LIMIT_L,REG::MAX_ANGLE_LIMIT_H);

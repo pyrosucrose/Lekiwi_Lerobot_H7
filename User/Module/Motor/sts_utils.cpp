@@ -77,14 +77,14 @@ MotorSts::MotorSts(const uint8_t ID, const uint16_t zero_point, const uint16_t m
     {
         motors_[motors_count_] = this;
         if (motors_idx_[ID] != 0x00 && motors_idx_[ID] != Special::ILLEGAL_ID)  // 没辙，否则idx_必须手动写255个0xFF进去
+            // 你是不是注册了ID相同的电机 o_O
             Crash();
         motors_idx_[ID] = motors_count_;
         motors_count_++;
     }
     else
-    {
+        // 电机数量上限太小了，调大 MAX_MOTORS_COUNT
         Crash();
-    }
 }
 
 /**
@@ -108,5 +108,6 @@ MotorSts::~MotorSts()
             return;
         }
     }
+    // We should never get here as each registered motor should have a pool
     Crash();
 }
