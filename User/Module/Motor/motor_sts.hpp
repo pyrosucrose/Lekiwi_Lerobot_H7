@@ -19,12 +19,12 @@ class MotorSts
     friend class LekiwiArm;         // TODO 完工后去掉
     friend class LekiwiChassis;     // TODO 完工后去掉
 
-    static constexpr uint8_t MAX_MOTOR_ID = 0xFD;
-    static constexpr uint8_t MAX_MOTORS_COUNT = 20;
-    static constexpr uint8_t MAX_BUF_LEN = 32;
-    static constexpr bool DEBUG_MODE = false;
+    static constexpr uint16_t ENCODER_RESOLUTION = 4096;    // 不能改，除非协议变动 // 电机编码器分辨率(刻度/圈)
+    static constexpr uint8_t MAX_MOTOR_ID       = 0xFD;     // 不能改，除非协议变动 // 最大电机的ID
 
-    static constexpr uint16_t ENCODER_RESOLUTION = 4096;
+    static constexpr uint8_t MAX_MOTORS_COUNT   = 20;       // 最大电机数量(多了可能加重负担，但实际应该不太影响)
+    static constexpr uint8_t MAX_BUF_LEN        = 32;       // 每个电机私有缓冲区长度(不要太大，大了会显著加重堆栈/RAM负担)
+    static constexpr bool DEBUG_MODE            = false;    // 调试模式(开启后将会在串口重定向中输出解包数据)
 public:
     typedef enum : uint8_t
     {
@@ -146,14 +146,7 @@ public:
     static void WriteAll(REG r, uint16_t v);
     static void Init();
 
-    void SetSoftTargetPos_Ecd(const int16_t t)
-    {
-        is_param_set_ = true;
-        target_pos_ecd_ =
-            Clamp(static_cast<uint16_t>(is_reversed_ ? zero_point_ecd_ - t : zero_point_ecd_ + t), min_pos_ecd_, max_pos_ecd_);
-        soft_target_pos_ecd_ =
-            Clamp(t, soft_min_pos_ecd_, soft_max_pos_ecd_);
-    }
+    void SetSoftTargetPos_Ecd(int16_t t);
     void SetSoftTargetPos_Rad(const float t)    { SetSoftTargetPos_Ecd(Rad2Ecd(t)); }
     void SetSoftTargetPos_One(const float t)    { SetSoftTargetPos_Ecd(One2Ecd(t)); }
     void SetSoftTargetVel_Ecd(const int16_t t)  { soft_target_vel_ecd_ = t; target_vel_ecd_ = is_reversed_ ? -t : t; is_param_set_ = true; }
@@ -213,10 +206,10 @@ private:
     uint8_t ack_l_ = 0xFF, ack_h_ = 0x00;   // 读取指令发送时被上面的置位，解析完成后被复位
     uint8_t status_ = 0;
     bool error_ = false;
-    bool is_param_set_ = false;     // 设置参数时置为true以被ControlAll调用发送
-    bool received_pack_ = false;    // 有匹配该ID的回调来时置为true以执行Unpack指令(即使未成功写入也会置位防止卡死)
-    bool in_use_ = false;           // 发送读指令后置为true以防止回调完成之前被再次执行读指令
-    bool is_unpacking_ = false;     // 开始解包时置为true以阻止中断回调写入数据
+    bool is_param_set_ = false;     // 设置参数时置位以被ControlAll调用发送，发送后复位
+    bool received_pack_ = false;    // 有匹配该ID的回调时置位以执行Unpack指令(即使未成功写入也会置位防止卡死)，解包返回帧后复位
+    bool in_use_ = false;           // 发送读指令后置位以防止回调完成之前被再次执行读指令，解包返回帧后复位
+    bool is_unpacking_ = false;     // 开始解包时置位以阻止中断回调写入数据，解包完成后复位
 
     uint8_t rx_buffer_[MAX_BUF_LEN] = {};
 
