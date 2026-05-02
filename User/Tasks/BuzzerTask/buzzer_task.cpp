@@ -11,6 +11,7 @@
 #include "task.h"
 #include "buzzer.hpp"
 #include "music_soundtrack.hpp"
+#include "user_soundtrack.h"
 #include "remote.hpp"
 
 void BuzzerTask(void *pv)
@@ -19,15 +20,15 @@ void BuzzerTask(void *pv)
     bool sb = false;
     bool sd = false;
     const Buzzer::Config cfg_sa = {
-        Buzzer::Soundtracks::soundtrack_idoratrize_world, std::size(Buzzer::Soundtracks::soundtrack_idoratrize_world),
+        Buzzer::Soundtracks::idoratrize_world, std::size(Buzzer::Soundtracks::idoratrize_world),
         10, &sa, true, true
     };
     const Buzzer::Config cfg_sb = {
-        Buzzer::Soundtracks::soundtrack_immortal_ash, std::size(Buzzer::Soundtracks::soundtrack_immortal_ash),
+        Buzzer::Soundtracks::immortal_ash, std::size(Buzzer::Soundtracks::immortal_ash),
         9, &sb, true, true
     };
     const Buzzer::Config cfg_sc = {
-        Buzzer::Soundtracks::soundtrack_watery_graves, std::size(Buzzer::Soundtracks::soundtrack_watery_graves),
+        Buzzer::Soundtracks::watery_graves, std::size(Buzzer::Soundtracks::watery_graves),
         8, &sd, true, true
     };
     // Buzzer::AddConfig(cfg_sa);

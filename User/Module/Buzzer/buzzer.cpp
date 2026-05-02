@@ -2,7 +2,6 @@
 // Created by Glucose_carbide on 2026-04-15.
 //
 
-
 #include "buzzer.hpp"
 
 #include <iterator>
@@ -28,8 +27,8 @@ namespace Buzzer
         bool default_mute_trigger = true;
 
         constexpr Config default_config = {
-            .soundtrack = Soundtracks::soundtrack_mute,
-            .track_len = std::size(Soundtracks::soundtrack_mute),
+            .soundtrack = Soundtracks::track_mute,
+            .track_len = std::size(Soundtracks::track_mute),
             .priority = 0,
             .trigger = &default_mute_trigger,
             .active_trigger_state = true,
