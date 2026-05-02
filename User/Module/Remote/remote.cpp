@@ -1,11 +1,9 @@
 //
-// Created by Glucose_carbide on 25-8-8.
+// Created by Glucose_carbide on 2026-05-02.
 //
 
-// =============================== 引入头文件 ===============================
 #include "remote.hpp"
 
-// =============================== 宏定义区 ===============================
 #if REMOTE_TYPE == DT7
 static constexpr uint16_t RC_OFFSET         = 1024;
 static constexpr float  RC_CHANNEL_MAX      = 660.0f;
@@ -25,9 +23,6 @@ static constexpr float RC_CHANNEL_MAX       = 784.0f;
 #endif
 
 static constexpr uint8_t REMOTE_DEAD_ZONE = 5;
-// =============================== 变量区 ==================================
-
-// =============================== 函数实现 ===============================
 
 static int16_t ReturnSwitchStatus(const int16_t status)
 {

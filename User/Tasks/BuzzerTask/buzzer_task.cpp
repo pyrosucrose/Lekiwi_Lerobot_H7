@@ -1,8 +1,7 @@
 //
-// Created by Glucose_carbide on 25-8-8.
+// Created by Glucose_carbide on 2026-05-02.
 //
 
-// =============================== 引入头文件 ===============================
 #include "buzzer_task.hpp"
 
 #include <iterator>
@@ -11,16 +10,8 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "buzzer.hpp"
-#include "delay.hpp"
 #include "music_soundtrack.hpp"
 #include "remote.hpp"
-#include "usartio.hpp"
-
-// =============================== 宏定义区 ===============================
-
-// =============================== 变量区 ==================================
-
-// =============================== 函数实现 ===============================
 
 void BuzzerTask(void *pv)
 {
@@ -45,13 +36,10 @@ void BuzzerTask(void *pv)
     portTickType current_time = xTaskGetTickCount();         //获取当前tick（时间）
     while (true)
     {
-        // usart_printf("2\n");
-        // auto s = Delay::GetTimeStamp();
         Buzzer::ControlLoop();
         sa = rc_data.GetRcSwitchA() != eRemoteSwitchValue::HIGH;
         sb = rc_data.GetRcSwitchB() != eRemoteSwitchValue::HIGH;
         sd = rc_data.GetRcSwitchD() != eRemoteSwitchValue::HIGH;
         vTaskDelayUntil(&current_time, pdMS_TO_TICKS(TASK_BUZZER_TASK_PERIOD));
-        // usart_printf("%f\n",Delay::CalculateInterval_us(s));
     }
 }

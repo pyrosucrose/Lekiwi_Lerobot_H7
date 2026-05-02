@@ -1,22 +1,16 @@
 //
-// Created by Glucose_carbide on 25-8-8.
+// Created by Glucose_carbide on 2026-05-02.
 //
 
-// =============================== 引入头文件 ===============================
 #include "usartio.hpp"
 #include "dma.h"
 #include <cstdarg>
 #include <cstdio>
 
 #include "buzzer.hpp"
-#include "delay.hpp"
 #include "remote.hpp"
-#include "template.hpp"
 #include "robot.hpp"
 
-// =============================== 宏定义区 ===============================
-
-// =============================== 变量区 ==================================
 uint8_t uart1_rx_buffer[UART1_RX_BUFFER_SIZE] = {};
 uint8_t uart1_tx_buffer[UART1_TX_BUFFER_SIZE] = {};
 uint8_t uart5_rx_buffer[UART5_RX_BUFFER_SIZE] = {};

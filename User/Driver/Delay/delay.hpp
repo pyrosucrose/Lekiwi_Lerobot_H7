@@ -1,15 +1,12 @@
 //
-// Created by Glucose_carbide on 25-8-8.
+// Created by Glucose_carbide on 2026-05-02.
 //
 
 #pragma once
 
-// =============================== 调用库 ===============================
 #include "tim.h"
-#include "usartio.hpp"
 namespace Delay
 {
-    // =============================== 宏定义区 ===============================
     inline constexpr TIM_HandleTypeDef* delay_handle = &htim13;
     inline constexpr uint8_t FREQ_MHZ = 1;
     inline constexpr uint16_t MAX_SAFE_TICK = 60000;
@@ -18,9 +15,6 @@ namespace Delay
     inline constexpr uint32_t MAX_SAFE_US = MAX_SAFE_TICK * US_FACTOR;
     inline constexpr uint32_t MAX_SAFE_MS = MAX_SAFE_US / 1000 - 1;
 
-    // =============================== 变量区 ===============================
-
-    // =============================== 函数声明 ===============================
     inline void Init()
     {
         HAL_TIM_Base_Start(delay_handle);

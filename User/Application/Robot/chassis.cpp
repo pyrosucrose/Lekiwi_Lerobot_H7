@@ -1,19 +1,13 @@
 //
-// Created by Glucose_carbide on 25-8-8.
+// Created by Glucose_carbide on 2026-05-02.
 //
 
-// =============================== 引入头文件 ===============================
 #include "chassis.hpp"
 #include <cmath>
 #include "typedef.hpp"
 #include "config.hpp"
 #include "remote.hpp"
 
-// =============================== 宏定义区 ===============================
-
-// =============================== 变量区 ==================================
-
-// =============================== 函数实现 ===============================
 void LekiwiChassis::GetDataFromRc()
 {
     if (rc_data.GetRcSwitchA() == HIGH && rc_data.GetRcSwitchB() == HIGH)

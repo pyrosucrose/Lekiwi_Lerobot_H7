@@ -1,16 +1,12 @@
 //
-// Created by Glucose_carbide on 25-8-8.
+// Created by Glucose_carbide on 2026-05-02.
 //
 
 #pragma once
 
-// =============================== 调用库 ===============================
 #include <cstdint>
 #include "math.tpp"
 
-// =============================== 宏定义区 ===============================
-
-// =============================== 变量区 ===============================
 inline constexpr float USER_PI = 3.14159265f;
 inline constexpr float USER_2PI = 2.0f * 3.14159265f;
 inline constexpr float USER_1_PI = 1.0f / USER_PI;
@@ -21,15 +17,12 @@ inline constexpr float RAD_TO_DEG = 180.0f / USER_PI;
 inline constexpr float RPM_TO_RAD = USER_PI / 30.0f;
 inline constexpr float RAD_TO_RPM = 30.0f * USER_1_PI;
 
-// =============================== 函数声明 ===============================
 [[nodiscard]] float AbsMax(const float *list, uint8_t len = 4);
 [[nodiscard]] float Max(const float *list, uint8_t len = 4);
 [[nodiscard]] float Min(const float *list, uint8_t len = 4);
 bool Round_p(float* p_value, float limit = 360.0f);
 [[nodiscard]] float Round_v(float value, float limit = 360.0f);
 bool Limit(float* value, float min, float max);
-
-// =============================== 库函数实现 ===============================
 
 /// 角度值转为弧度值
 [[nodiscard]] constexpr float Degree2Rad(const float angle)

@@ -1,8 +1,7 @@
 //
-// Created by Glucose_carbide on 25-8-8.
+// Created by Glucose_carbide on 2026-05-02.
 //
 
-// =============================== 引入头文件 ===============================
 #include "robot_send_task.hpp"
 #include "config.hpp"
 #include "delay.hpp"
@@ -10,12 +9,6 @@
 #include "task.h"
 #include "robot.hpp"
 #include "usartio.hpp"
-
-// =============================== 宏定义区 ===============================
-
-// =============================== 变量区 ==================================
-
-// =============================== 函数实现 ===============================
 
 void RobotSendTask(void *pv)
 {

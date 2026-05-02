@@ -1,10 +1,9 @@
 //
-// Created by Glucose_carbide on 25-8-8.
+// Created by Glucose_carbide on 2026-05-02.
 //
 
 #pragma once
 
-// =============================== 调用库 ===============================
 #include <cstdint>
 #include <cmath>
 #include "typedef.hpp"
@@ -25,6 +24,4 @@ inline constexpr uint8_t TASK_DEBUG_TASK_PERIOD      = 4;
 inline constexpr uint8_t TASK_LED_TASK_PERIOD        = 5;
 
 #define  huart_sts  huart10
-
-// =============================== 参数计算区(不得修改) ===============================
 

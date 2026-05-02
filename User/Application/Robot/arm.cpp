@@ -1,18 +1,12 @@
 //
-// Created by Glucose_carbide on 25-8-8.
+// Created by Glucose_carbide on 2026-05-02.
 //
 
-// =============================== 引入头文件 ===============================
 #include "arm.hpp"
 #include "math.hpp"
 #include "remote.hpp"
 #include "usartio.hpp"
 
-// =============================== 宏定义区 ===============================
-
-// =============================== 变量区 ==================================
-
-// =============================== 函数实现 ===============================
 void LekiwiArm::GetDataFromRc()
 {
     target_x_last = target_x;
