@@ -3,7 +3,7 @@
 //
 
 #include "arm.hpp"
-#include "math.hpp"
+#include "utils_math.hpp"
 #include "remote.hpp"
 #include "usartio.hpp"
 
@@ -13,7 +13,7 @@ void LekiwiArm::GetDataFromRc()
     target_y_last = target_y;
     target_theta_last = target_theta;
 
-    target_gripper = Map(rc_data.GetRcKnobLeft(), -783.0, 783.0, 0.0f, 1.0f);
+    target_gripper = utils::Map(rc_data.GetRcKnobLeft(), -783.0, 783.0, 0.0f, 1.0f);
 
     if (rc_data.GetRcSwitchC() == eRemoteSwitchValue::LOW)
     {
@@ -31,7 +31,7 @@ void LekiwiArm::GetDataFromRc()
     if (is_mode_a || is_mode_b)
     {
         target_wrist += rc_data.GetRcRightHorizontal() * 2e-3f;
-        target_wrist = Clamp(target_wrist, 0.0f, 1.0f);
+        target_wrist = utils::Clamp(target_wrist, 0.0f, 1.0f);
         target_yaw_ += rc_data.GetRcLeftHorizontal() * 1e-2f;
     }
 
@@ -51,9 +51,9 @@ void LekiwiArm::GetDataFromRc()
         target_theta += rc_data.GetRcRightVertical() / 100.0f;
     }
 
-    target_x = Clamp(target_x, -200.0f, 300.0f);
-    target_y = Clamp(target_y, -200.0f, 300.0f);
-    target_theta = Clamp(target_theta, -USER_PI * 3.0f / 5.0f, USER_PI * 3.0f / 4.0f);
+    target_x = utils::Clamp(target_x, -200.0f, 300.0f);
+    target_y = utils::Clamp(target_y, -200.0f, 300.0f);
+    target_theta = utils::Clamp(target_theta, -utils::USER_PI * 3.0f / 5.0f, utils::USER_PI * 3.0f / 4.0f);
 }
 
 bool LekiwiArm::Solve()
@@ -64,7 +64,7 @@ bool LekiwiArm::Solve()
     const float K = (l2*l2 + X*X + Y*Y - l1*l1) / (2.0f*l2);
     if (R < 1e-6f) return false;
     float K_R = K / R;
-    if (fabsf(K_R) <= 1+1e-6f) K_R = Clamp(K_R, -1.0f, 1.0f);
+    if (fabsf(K_R) <= 1+1e-6f) K_R = utils::Clamp(K_R, -1.0f, 1.0f);
     else return false;
     const float phi = atan2f(Y, X);
 
@@ -75,10 +75,10 @@ bool LekiwiArm::Solve()
     const float beta_2 = phi + acosf(K_R);
     const float a1 = atan2f(l2 * cosf(beta_1) - X, Y - l2 * sinf(beta_1));
     const float a2 = atan2f(l2 * cosf(beta_2) - X, Y - l2 * sinf(beta_2));
-    const float b1 = Round_v(beta_1 - a1, 2 * M_PI);
-    const float b2 = Round_v(beta_2 - a2, 2 * M_PI);
-    const float c1 = Round_v(target_theta - beta_1, 2 * M_PI);
-    const float c2 = Round_v(target_theta - beta_2, 2 * M_PI);
+    const float b1 = utils::Round_v(beta_1 - a1, 2 * M_PI);
+    const float b2 = utils::Round_v(beta_2 - a2, 2 * M_PI);
+    const float c1 = utils::Round_v(target_theta - beta_1, 2 * M_PI);
+    const float c2 = utils::Round_v(target_theta - beta_2, 2 * M_PI);
 
     motors[0].SetSoftTargetPos_Rad(target_yaw_);
     if (motors[1].IsSafePos_Rad(a1) && motors[2].IsSafePos_Rad(b1) && motors[3].IsSafePos_Rad(c1))
@@ -118,7 +118,7 @@ void LekiwiArm::DeSolve() const
     const float y =  l1 * cosf(a) + l2 * sinf(a + b);// + l3 * sinf(theta);
 
     // usart_printf("%f,%f,%f\n",a,b,c);
-    usart_printf("%.1f,%.1f,%.1f,%.1f,%.1f,%.1f\n",target_x,target_y,Rad2Degree(target_theta),x,y,Rad2Degree(theta));
+    usart_printf("%.1f,%.1f,%.1f,%.1f,%.1f,%.1f\n",target_x,target_y,utils::Rad2Degree(target_theta),x,y,utils::Rad2Degree(theta));
 }
 
 void LekiwiArm::TransmitBusControlCmd()

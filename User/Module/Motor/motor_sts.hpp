@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "math.hpp"
+#include "utils_math.hpp"
 
 class MotorSts
 {
@@ -144,7 +144,7 @@ public:
     void SetSoftTargetVel_Ecd(const int16_t t)  { soft_target_vel_ecd_ = t; target_vel_ecd_ = is_reversed_ ? -t : t; is_param_set_ = true; }
     void SetSoftTargetVel_Rad(const float t)    { SetSoftTargetVel_Ecd(Rad2Ecd(t)); }
 
-    [[nodiscard]] bool IsSafePos_Ecd(const int16_t p) const { return IsBetween(static_cast<int16_t>(is_reversed_ ? -p : p), soft_min_pos_ecd_, soft_max_pos_ecd_, static_cast<int16_t>(10)); }
+    [[nodiscard]] bool IsSafePos_Ecd(const int16_t p) const { return utils::IsBetween(static_cast<int16_t>(is_reversed_ ? -p : p), soft_min_pos_ecd_, soft_max_pos_ecd_, static_cast<int16_t>(10)); }
     [[nodiscard]] bool IsSafePos_Rad(const float p)   const { return IsSafePos_Ecd(Rad2Ecd(p)); }
 
     [[nodiscard]] bool IsReversed() const { return is_reversed_; }
@@ -171,12 +171,12 @@ private:
     static int16_t  PackStsData(uint8_t L, uint8_t H);
     static uint16_t ConvertStsData(uint16_t s);
     static bool     IsLowByteReg(REG reg);
-    void ClampPos() { target_pos_ecd_ = Clamp(target_pos_ecd_, min_pos_ecd_, max_pos_ecd_); }
-    [[nodiscard]] static int16_t  Rad2Ecd(const float v) { return static_cast<int16_t>(Rad2Round(v) * ENCODER_RESOLUTION); }
-    [[nodiscard]] static float    Ecd2Rad(const int16_t v) { return Round2Rad(v) / static_cast<float>(ENCODER_RESOLUTION); }
+    void ClampPos() { target_pos_ecd_ = utils::Clamp(target_pos_ecd_, min_pos_ecd_, max_pos_ecd_); }
+    [[nodiscard]] static int16_t  Rad2Ecd(const float v) { return static_cast<int16_t>(utils::Rad2Round(v) * ENCODER_RESOLUTION); }
+    [[nodiscard]] static float    Ecd2Rad(const int16_t v) { return utils::Round2Rad(v) / static_cast<float>(ENCODER_RESOLUTION); }
 
-    [[nodiscard]] float Ecd2One(const int16_t v) const { return Map(v, soft_min_pos_ecd_, soft_max_pos_ecd_, 0.0f, 1.0f); }
-    [[nodiscard]] int16_t One2Ecd(const float v) const { return static_cast<int16_t>(Map(v, 0.0f, 1.0f, soft_min_pos_ecd_, soft_max_pos_ecd_)); }
+    [[nodiscard]] float Ecd2One(const int16_t v) const { return utils::Map(v, soft_min_pos_ecd_, soft_max_pos_ecd_, 0.0f, 1.0f); }
+    [[nodiscard]] int16_t One2Ecd(const float v) const { return static_cast<int16_t>(utils::Map(v, 0.0f, 1.0f, soft_min_pos_ecd_, soft_max_pos_ecd_)); }
 
     uint8_t ID_;
     const bool is_reversed_;

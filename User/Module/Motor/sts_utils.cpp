@@ -6,6 +6,7 @@
 
 #include "crash.hpp"
 #include "delay.hpp"
+#include "usartio.hpp"
 
 /**
  * @brief   拼接返回数据
@@ -302,7 +303,7 @@ void MotorSts::SetSoftTargetPos_Ecd(const int16_t t)
 {
     is_param_set_ = true;
     target_pos_ecd_ =
-        Clamp(static_cast<uint16_t>(is_reversed_ ? zero_point_ecd_ - t : zero_point_ecd_ + t), min_pos_ecd_, max_pos_ecd_);
+        utils::Clamp(static_cast<uint16_t>(is_reversed_ ? zero_point_ecd_ - t : zero_point_ecd_ + t), min_pos_ecd_, max_pos_ecd_);
     soft_target_pos_ecd_ =
-        Clamp(t, soft_min_pos_ecd_, soft_max_pos_ecd_);
+        utils::Clamp(t, soft_min_pos_ecd_, soft_max_pos_ecd_);
 }
