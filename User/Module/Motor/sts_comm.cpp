@@ -88,6 +88,7 @@ void MotorSts::TransmitReadCommand()
  * @param   v: 写入的值
  * @warning 只有需要写入的寄存器是某个16位值的低8位时才能传入>255的数据，否则崩溃
  *          - 如果你真需要利用低位截断的话，在传入时static_cast<uint8_t>(val)
+ *          - 在传入int8的负值时，必须使用static_cast<uint8_t>(val)进行转换！
  */
 void MotorSts::TransmitWriteCommand(const REG r, uint16_t v) const
 {
