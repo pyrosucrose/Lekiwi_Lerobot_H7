@@ -115,8 +115,11 @@ MotorSts::~MotorSts()
 void MotorSts::UnpackAll()
 {
     for (uint8_t i = 0; i < motors_count_; i++)
+    {
         if (motors_[i]->received_pack_)
             motors_[i]->UnpackData();
+        motors_[i]->in_use_ = false;
+    }
 }
 
 /**
@@ -145,7 +148,7 @@ void MotorSts::UnpackData()
             break;
         case REG::NOW_POS_L:
             pos_ecd_  = PackStsData(rx_buffer_[i], rx_buffer_[i + 1]);
-            soft_pos_ecd = static_cast<int16_t>(is_reversed_ ? zero_point_ecd_ - pos_ecd_ : zero_point_ecd_ + pos_ecd_);
+            soft_pos_ecd = static_cast<int16_t>(is_reversed_ ? zero_point_ecd_ - pos_ecd_ : -zero_point_ecd_ + pos_ecd_);
             break;
         case REG::NOW_SPEED_L:
             vel_ecd_  = PackStsData(rx_buffer_[i], rx_buffer_[i + 1]);
