@@ -121,6 +121,16 @@ void LekiwiArm::DeSolve() const
     usart_printf("%.1f,%.1f,%.1f,%.1f,%.1f,%.1f\n",target_x,target_y,utils::Rad2Degree(target_theta),x,y,utils::Rad2Degree(theta));
 }
 
+void LekiwiArm::Follow()
+{
+    motors[0].SetSoftTargetPos_One(controller[0].GetSoftPos_One());
+    motors[1].SetSoftTargetPos_One(controller[1].GetSoftPos_One());
+    motors[2].SetSoftTargetPos_One(controller[2].GetSoftPos_One());
+    motors[3].SetSoftTargetPos_One(controller[3].GetSoftPos_One());
+    motors[4].SetSoftTargetPos_One(controller[4].GetSoftPos_One());
+    motors[5].SetSoftTargetPos_One(controller[5].GetSoftPos_One());
+}
+
 void LekiwiArm::TransmitBusControlCmd()
 {
     uint8_t idx = 0;
@@ -180,16 +190,31 @@ void LekiwiArm::DisableAll()
 
 void LekiwiArm::ControlLoop()
 {
+    usart_printf("%d,%d,%d,%d,%d,%d\n",
+        MotorSts::motors_[MotorSts::motors_idx_[11]]->in_use_,
+        MotorSts::motors_[MotorSts::motors_idx_[12]]->in_use_,
+        MotorSts::motors_[MotorSts::motors_idx_[13]]->in_use_,
+        MotorSts::motors_[MotorSts::motors_idx_[14]]->in_use_,
+        MotorSts::motors_[MotorSts::motors_idx_[15]]->in_use_,
+        MotorSts::motors_[MotorSts::motors_idx_[16]]->in_use_
+    );
     if (rc_data.IsRcOnline())
     {
-        GetDataFromRc();
-        if (!Solve())
+        if (rc_data.GetRcSwitchD() == eRemoteSwitchValue::HIGH)
         {
-            target_x = target_x_last;
-            target_y = target_y_last;
-            target_theta = target_theta_last;
+            GetDataFromRc();
+            if (!Solve())
+            {
+                target_x = target_x_last;
+                target_y = target_y_last;
+                target_theta = target_theta_last;
+            }
+            SolveEnd();
+            // DeSolve();
         }
-        SolveEnd();
-        // DeSolve();
+        else
+        {
+            Follow();
+        }
     }
 }
