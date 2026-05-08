@@ -6,7 +6,6 @@
 
 #include <cstring>
 
-#include "config.hpp"
 #include "crash.hpp"
 #include "usartio.hpp"
 
@@ -20,7 +19,7 @@
  */
 void MotorSts::RxCallback(const uint8_t* data)
 {
-    if (data[0] != 0xFF || data[1] != 0xFF) return;   // 数据错乱不处理
+    if (data[0] != 0xFF || data[1] != 0xFF) return; // 数据错乱不处理
 
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < data[3] + 3; i++)
@@ -163,7 +162,7 @@ void MotorSts::ControlAll()
     if (HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx) == HAL_OK)
         for (uint8_t i = 0; i < motors_count_; i++)
         {
-            // if (!motors_[i]->is_param_set_) continue; // 实际不需要，因为无论过程如何结果都一样()
+            if (!motors_[i]->is_param_set_) continue;
             motors_[i]->is_param_set_ = false;
         }
 }
@@ -204,7 +203,7 @@ void MotorSts::ReadAll(REG s, REG e)
     if (HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx) == HAL_OK)
         for (uint8_t i = 0; i < motors_count_; i++)
         {
-            // if (motors_[i]->in_use_) continue; // 实际不需要，因为无论过程如何结果都一样()
+            if (motors_[i]->in_use_) continue;
             motors_[i]->in_use_ = true;
             motors_[i]->ack_l_ = motors_[i]->cmd_l_;
             motors_[i]->ack_h_ = motors_[i]->cmd_h_;
