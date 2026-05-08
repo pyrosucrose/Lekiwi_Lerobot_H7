@@ -26,8 +26,8 @@ extern DMA_HandleTypeDef hdma_uart5_rx;
 extern DMA_HandleTypeDef hdma_usart10_rx;
 extern DMA_HandleTypeDef hdma_usart10_tx;
 
-extern uint8_t uart_sts_rx_buffer[UART_STS_RX_BUFFER_SIZE];
-extern uint8_t uart_sts_tx_buffer[UART_STS_TX_BUFFER_SIZE];
+extern uint8_t uart10_rx_buffer[UART_STS_RX_BUFFER_SIZE];
+extern uint8_t uart10_tx_buffer[UART_STS_TX_BUFFER_SIZE];
 
 void Usartio_Init();
 void Uart10_Restart();

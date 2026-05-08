@@ -9,6 +9,11 @@
 
 namespace Buzzer::Soundtracks
 {
+    constexpr MusicUnit timeout[] = {
+        {480,0,0},
+        {1000,1,8},{1000,1,8},
+        {mute,30}
+    };
     constexpr MusicUnit pure_fries[] = {
         {440,0,0},
         {la_4,1,13}, {la_4,1,13},

@@ -62,21 +62,21 @@ void MotorSts::TransmitReadCommand()
     if (in_use_) return;
 
     uint8_t idx = 0;
-    uart_sts_tx_buffer[idx++] = 0xFF;                       // TxHeader1
-    uart_sts_tx_buffer[idx++] = 0xFF;                       // TxHeader2
-    uart_sts_tx_buffer[idx++] = ID_;                        // ID
-    uart_sts_tx_buffer[idx++] = Special::DUMMY;             // Reserved for FrameLen
-    uart_sts_tx_buffer[idx++] = Command::READ;              // Command
-    uart_sts_tx_buffer[idx++] = cmd_l_;                     // RegStart
-    uart_sts_tx_buffer[idx++] = cmd_h_ - cmd_l_ + 1;        // RegLength
-    uart_sts_tx_buffer[3] = idx - 3;                        // FrameLength
+    uart10_tx_buffer[idx++] = 0xFF;                       // TxHeader1
+    uart10_tx_buffer[idx++] = 0xFF;                       // TxHeader2
+    uart10_tx_buffer[idx++] = ID_;                        // ID
+    uart10_tx_buffer[idx++] = Special::DUMMY;             // Reserved for FrameLen
+    uart10_tx_buffer[idx++] = Command::READ;              // Command
+    uart10_tx_buffer[idx++] = cmd_l_;                     // RegStart
+    uart10_tx_buffer[idx++] = cmd_h_ - cmd_l_ + 1;        // RegLength
+    uart10_tx_buffer[3] = idx - 3;                        // FrameLength
 
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < idx; i++)
-        check_sum += uart_sts_tx_buffer[i];
-    uart_sts_tx_buffer[idx++] = ~check_sum;                 // CheckSum
+        check_sum += uart10_tx_buffer[i];
+    uart10_tx_buffer[idx++] = ~check_sum;                 // CheckSum
 
-    if (HAL_UART_Transmit_DMA(&huart10, uart_sts_tx_buffer, idx) == HAL_OK)
+    if (HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx) == HAL_OK)
     {
         in_use_ = true;
         ack_l_ = cmd_l_;
@@ -101,23 +101,23 @@ void MotorSts::TransmitWriteCommand(const REG r, uint16_t v) const
     v = ConvertStsData(v);
 
     uint8_t idx = 0;
-    uart_sts_tx_buffer[idx++] = 0xFF;                       // TxHeader1
-    uart_sts_tx_buffer[idx++] = 0xFF;                       // TxHeader2
-    uart_sts_tx_buffer[idx++] = ID_;                        // ID
-    uart_sts_tx_buffer[idx++] = Special::DUMMY;             // Reserved for FrameLen
-    uart_sts_tx_buffer[idx++] = Command::WRITE;             // Command
-    uart_sts_tx_buffer[idx++] = static_cast<uint8_t>(r);    // RegStart
-    uart_sts_tx_buffer[idx++] = v;                          // SetValue
+    uart10_tx_buffer[idx++] = 0xFF;                       // TxHeader1
+    uart10_tx_buffer[idx++] = 0xFF;                       // TxHeader2
+    uart10_tx_buffer[idx++] = ID_;                        // ID
+    uart10_tx_buffer[idx++] = Special::DUMMY;             // Reserved for FrameLen
+    uart10_tx_buffer[idx++] = Command::WRITE;             // Command
+    uart10_tx_buffer[idx++] = static_cast<uint8_t>(r);    // RegStart
+    uart10_tx_buffer[idx++] = v;                          // SetValue
     if (is_low_byte_reg)
-        uart_sts_tx_buffer[idx++] = v >> 8;
-    uart_sts_tx_buffer[3] = idx - 3;                        // FrameLen
+        uart10_tx_buffer[idx++] = v >> 8;
+    uart10_tx_buffer[3] = idx - 3;                        // FrameLen
 
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < idx; i++)
-        check_sum += uart_sts_tx_buffer[i];
-    uart_sts_tx_buffer[idx++] = ~check_sum;
+        check_sum += uart10_tx_buffer[i];
+    uart10_tx_buffer[idx++] = ~check_sum;
 
-    HAL_UART_Transmit_DMA(&huart10, uart_sts_tx_buffer, idx);
+    HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx);
 }
 
 /**
@@ -128,39 +128,39 @@ void MotorSts::TransmitWriteCommand(const REG r, uint16_t v) const
 void MotorSts::ControlAll()
 {
     uint8_t idx = 0;
-    uart_sts_tx_buffer[idx++] = 0xFF;                       // TxHeader1
-    uart_sts_tx_buffer[idx++] = 0xFF;                       // TxHeader2
-    uart_sts_tx_buffer[idx++] = Special::MASTER_ID;         // ID
-    uart_sts_tx_buffer[idx++] = Special::DUMMY;             // Reserved for FrameLen
-    uart_sts_tx_buffer[idx++] = Command::SYN_WRITE;         // Command
-    uart_sts_tx_buffer[idx++] = static_cast<uint8_t>(REG::TARGET_POSITION_L); // RegStart
-    uart_sts_tx_buffer[idx++] = 0x06;                       // DataLen
+    uart10_tx_buffer[idx++] = 0xFF;                       // TxHeader1
+    uart10_tx_buffer[idx++] = 0xFF;                       // TxHeader2
+    uart10_tx_buffer[idx++] = Special::MASTER_ID;         // ID
+    uart10_tx_buffer[idx++] = Special::DUMMY;             // Reserved for FrameLen
+    uart10_tx_buffer[idx++] = Command::SYN_WRITE;         // Command
+    uart10_tx_buffer[idx++] = static_cast<uint8_t>(REG::TARGET_POSITION_L); // RegStart
+    uart10_tx_buffer[idx++] = 0x06;                       // DataLen
 
     for (uint8_t i = 0; i < motors_count_; i++)
     {
         if (!motors_[i]->is_param_set_) continue;
 
-        uart_sts_tx_buffer[idx++] = motors_[i]->ID_;
+        uart10_tx_buffer[idx++] = motors_[i]->ID_;
 
         const uint16_t val1 = ConvertStsData(motors_[i]->target_pos_ecd_);
-        uart_sts_tx_buffer[idx++] = val1;
-        uart_sts_tx_buffer[idx++] = val1 >> 8;
+        uart10_tx_buffer[idx++] = val1;
+        uart10_tx_buffer[idx++] = val1 >> 8;
 
-        uart_sts_tx_buffer[idx++] = 0;
-        uart_sts_tx_buffer[idx++] = 0;
+        uart10_tx_buffer[idx++] = 0;
+        uart10_tx_buffer[idx++] = 0;
 
         const uint16_t val2 = ConvertStsData(motors_[i]->target_vel_ecd_);
-        uart_sts_tx_buffer[idx++] = val2;
-        uart_sts_tx_buffer[idx++] = val2 >> 8;
+        uart10_tx_buffer[idx++] = val2;
+        uart10_tx_buffer[idx++] = val2 >> 8;
     }
-    uart_sts_tx_buffer[3] = idx - 3;                        // FrameLen
+    uart10_tx_buffer[3] = idx - 3;                        // FrameLen
 
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < idx; i++)
-        check_sum += uart_sts_tx_buffer[i];
-    uart_sts_tx_buffer[idx++] = ~check_sum;
+        check_sum += uart10_tx_buffer[i];
+    uart10_tx_buffer[idx++] = ~check_sum;
 
-    if (HAL_UART_Transmit_DMA(&huart10, uart_sts_tx_buffer, idx) == HAL_OK)
+    if (HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx) == HAL_OK)
         for (uint8_t i = 0; i < motors_count_; i++)
         {
             // if (!motors_[i]->is_param_set_) continue; // 实际不需要，因为无论过程如何结果都一样()
@@ -181,27 +181,27 @@ void MotorSts::ReadAll(REG s, REG e)
     const auto h = static_cast<uint8_t>(e);
     if (l > h) return;
     uint8_t idx = 0;
-    uart_sts_tx_buffer[idx++] = 0xFF;                       // TxHeader1
-    uart_sts_tx_buffer[idx++] = 0xFF;                       // TxHeader2
-    uart_sts_tx_buffer[idx++] = Special::MASTER_ID;         // ID
-    uart_sts_tx_buffer[idx++] = Special::DUMMY;             // Reserved for FrameLen
-    uart_sts_tx_buffer[idx++] = Command::SYN_READ;          // Command
-    uart_sts_tx_buffer[idx++] = l;                          // RegStart
-    uart_sts_tx_buffer[idx++] = h - l + 1;                  // DataLen
+    uart10_tx_buffer[idx++] = 0xFF;                       // TxHeader1
+    uart10_tx_buffer[idx++] = 0xFF;                       // TxHeader2
+    uart10_tx_buffer[idx++] = Special::MASTER_ID;         // ID
+    uart10_tx_buffer[idx++] = Special::DUMMY;             // Reserved for FrameLen
+    uart10_tx_buffer[idx++] = Command::SYN_READ;          // Command
+    uart10_tx_buffer[idx++] = l;                          // RegStart
+    uart10_tx_buffer[idx++] = h - l + 1;                  // DataLen
     for (uint8_t i = 0; i < motors_count_; i++)
     {
         if (motors_[i]->in_use_) continue;
         motors_[i]->SetReadRange(s, e);
-        uart_sts_tx_buffer[idx++] = motors_[i]->ID_;
+        uart10_tx_buffer[idx++] = motors_[i]->ID_;
     }
-    uart_sts_tx_buffer[3] = idx - 3;                        // FrameLen
+    uart10_tx_buffer[3] = idx - 3;                        // FrameLen
 
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < idx; i++)
-        check_sum += uart_sts_tx_buffer[i];
-    uart_sts_tx_buffer[idx++] = ~check_sum;
+        check_sum += uart10_tx_buffer[i];
+    uart10_tx_buffer[idx++] = ~check_sum;
 
-    if (HAL_UART_Transmit_DMA(&huart10, uart_sts_tx_buffer, idx) == HAL_OK)
+    if (HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx) == HAL_OK)
         for (uint8_t i = 0; i < motors_count_; i++)
         {
             // if (motors_[i]->in_use_) continue; // 实际不需要，因为无论过程如何结果都一样()
@@ -228,29 +228,29 @@ void MotorSts::WriteAll(const REG r, uint16_t v)
     v = ConvertStsData(v);
 
     uint8_t idx = 0;
-    uart_sts_tx_buffer[idx++] = 0xFF;                       // TxHeader1
-    uart_sts_tx_buffer[idx++] = 0xFF;                       // TxHeader2
-    uart_sts_tx_buffer[idx++] = Special::MASTER_ID;         // ID
-    uart_sts_tx_buffer[idx++] = Special::DUMMY;             // Reserved for FrameLen
-    uart_sts_tx_buffer[idx++] = Command::SYN_WRITE;         // Command
-    uart_sts_tx_buffer[idx++] = static_cast<uint8_t>(r);    // RegStart
-    uart_sts_tx_buffer[idx++] = 1 + is_low_byte_reg;        // DataLen
+    uart10_tx_buffer[idx++] = 0xFF;                       // TxHeader1
+    uart10_tx_buffer[idx++] = 0xFF;                       // TxHeader2
+    uart10_tx_buffer[idx++] = Special::MASTER_ID;         // ID
+    uart10_tx_buffer[idx++] = Special::DUMMY;             // Reserved for FrameLen
+    uart10_tx_buffer[idx++] = Command::SYN_WRITE;         // Command
+    uart10_tx_buffer[idx++] = static_cast<uint8_t>(r);    // RegStart
+    uart10_tx_buffer[idx++] = 1 + is_low_byte_reg;        // DataLen
 
     for (uint8_t i = 0; i < motors_count_; i++)
     {
-        uart_sts_tx_buffer[idx++] = motors_[i]->ID_;
-        uart_sts_tx_buffer[idx++] = v;
+        uart10_tx_buffer[idx++] = motors_[i]->ID_;
+        uart10_tx_buffer[idx++] = v;
         if (is_low_byte_reg)
-            uart_sts_tx_buffer[idx++] = v >> 8;
+            uart10_tx_buffer[idx++] = v >> 8;
     }
-    uart_sts_tx_buffer[3] = idx - 3;                        // FrameLen
+    uart10_tx_buffer[3] = idx - 3;                        // FrameLen
 
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < idx; i++)
-        check_sum += uart_sts_tx_buffer[i];
-    uart_sts_tx_buffer[idx++] = ~check_sum;                 // CheckSum
+        check_sum += uart10_tx_buffer[i];
+    uart10_tx_buffer[idx++] = ~check_sum;                 // CheckSum
 
-    HAL_UART_Transmit_DMA(&huart10, uart_sts_tx_buffer, idx);
+    HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx);
 }
 
 /**
