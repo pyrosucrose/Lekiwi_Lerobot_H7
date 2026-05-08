@@ -161,11 +161,11 @@ void MotorSts::UnpackData()
             break;
         case REG::NOW_POS_L:
             pos_ecd_  = PackStsData(rx_buffer_[i], rx_buffer_[i + 1]);
-            soft_pos_ecd = static_cast<int16_t>(is_reversed_ ? zero_point_ecd_ - pos_ecd_ : -zero_point_ecd_ + pos_ecd_);
+            soft_pos_ecd_ = static_cast<int16_t>(is_reversed_ ? zero_point_ecd_ - pos_ecd_ : -zero_point_ecd_ + pos_ecd_);
             break;
         case REG::NOW_SPEED_L:
             vel_ecd_  = PackStsData(rx_buffer_[i], rx_buffer_[i + 1]);
-            soft_vel_ecd = static_cast<int16_t>(is_reversed_ ? -vel_ecd_ : vel_ecd_);
+            soft_vel_ecd_ = static_cast<int16_t>(is_reversed_ ? -vel_ecd_ : vel_ecd_);
             break;
         case REG::NOW_LOAD_L:    load_ecd_ = PackStsData(rx_buffer_[i], rx_buffer_[i + 1]); break;
         case REG::NOW_VOLT:      volt_ecd_ = rx_buffer_[i]; break;

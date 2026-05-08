@@ -164,9 +164,9 @@ public:
     [[nodiscard]] int16_t  GetSoftTargetPos_Ecd() const { return soft_target_pos_ecd_; }
     [[nodiscard]] float    GetSoftTargetPos_Rad() const { return Ecd2Rad(GetSoftTargetPos_Ecd()); }
     [[nodiscard]] float    GetSoftTargetPos_One() const { return Ecd2One(GetSoftTargetPos_Ecd()); }
-    [[nodiscard]] int16_t  GetSoftVel_Ecd()       const { return soft_vel_ecd; }
+    [[nodiscard]] int16_t  GetSoftVel_Ecd()       const { return soft_vel_ecd_; }
     [[nodiscard]] float    GetSoftVel_Rad()       const { return Ecd2Rad(GetSoftVel_Ecd()); }
-    [[nodiscard]] int16_t  GetSoftPos_Ecd()       const { return soft_pos_ecd; }
+    [[nodiscard]] int16_t  GetSoftPos_Ecd()       const { return soft_pos_ecd_; }
     [[nodiscard]] float    GetSoftPos_Rad()       const { return Ecd2Rad(GetSoftPos_Ecd()); }
     [[nodiscard]] float    GetSoftPos_One()       const { return Ecd2One(GetSoftPos_Ecd()); }
 
@@ -189,8 +189,8 @@ private:
     uint16_t min_pos_ecd_;  int16_t soft_min_pos_ecd_;
     uint16_t max_pos_ecd_;  int16_t soft_max_pos_ecd_;
 
-    uint16_t pos_ecd_{0};  int16_t soft_pos_ecd{0};
-    uint16_t vel_ecd_{0};  int16_t soft_vel_ecd{0};
+    uint16_t pos_ecd_{0};  int16_t soft_pos_ecd_{0};
+    uint16_t vel_ecd_{0};  int16_t soft_vel_ecd_{0};
     int16_t load_ecd_{0};
     uint8_t volt_ecd_{0};
     uint8_t temp_ecd_{0};
