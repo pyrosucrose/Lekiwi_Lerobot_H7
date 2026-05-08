@@ -27,6 +27,8 @@ void MotorSts::RxCallback(const uint8_t* data)
         check_sum += data[i];
     check_sum = ~check_sum;
     if (data[data[3] + 3] != check_sum) return;     // 校验和不匹配不处理
+    last_ack_all_ = HAL_GetTick();
+    connected_ = true;
 
     if (const uint8_t ID = data[2]; motors_[motors_idx_[ID]])
     {
@@ -36,7 +38,7 @@ void MotorSts::RxCallback(const uint8_t* data)
         if (data[3] - 2 > 0)
         {
             motors_[motors_idx_[ID]]->received_pack_ = true;        // 但仍需将标志位置1防止死循环 ↓
-            motors_[motors_idx_[ID]]->last_ack_tick_ = HAL_GetTick();
+            motors_[motors_idx_[ID]]->last_ack_tick_ = last_ack_all_;
             motors_[motors_idx_[ID]]->is_online_ = true;
             if (motors_[motors_idx_[ID]]->is_unpacking_) return;    // 若处理回调时则不拷贝防止数据错乱
             memcpy(motors_[motors_idx_[ID]]->rx_buffer_, &data[3], data[3]);

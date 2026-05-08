@@ -19,7 +19,7 @@ uint8_t uart_sts_rx_buffer[UART_STS_RX_BUFFER_SIZE] = {};
 uint8_t uart_sts_tx_buffer[UART_STS_TX_BUFFER_SIZE] = {0xFF, 0xFF};
 
 inline constexpr uint8_t  UART_TX_BUFFER_COUNT = 32;
-inline constexpr uint16_t UART_TX_BUFFER_SIZE = 64;
+inline constexpr uint16_t UART_TX_BUFFER_SIZE = 128;
 
 struct
 {
@@ -41,6 +41,16 @@ void Usartio_Init()
     __HAL_DMA_DISABLE_IT(&hdma_usart10_rx, DMA_IT_HT);
 }
 
+void Uart10_Restart()
+{
+    if (__HAL_UART_GET_FLAG(&huart10, UART_FLAG_ORE))
+        __HAL_UART_CLEAR_OREFLAG(&huart10);
+    HAL_UART_DMAStop(&huart10);
+    __HAL_UART_CLEAR_IDLEFLAG(&huart10);
+    __HAL_DMA_DISABLE_IT(&hdma_usart10_rx, DMA_IT_HT);
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart10, uart_sts_rx_buffer, UART_STS_RX_BUFFER_SIZE);
+}
+
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
     if (huart->Instance == USART1)
@@ -53,13 +63,11 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 
     else if (huart->Instance == USART10)
     {
-        // auto s = Delay::GetTimeStamp();
         if (Size > 0)
         {
             MotorSts::RxCallback(uart_sts_rx_buffer);
         }
         HAL_UARTEx_ReceiveToIdle_DMA(&huart10, uart_sts_rx_buffer, UART_STS_RX_BUFFER_SIZE);
-        // usart_printf("%f\n",Delay::CalculateInterval_us(s));
     }
 
     else if (huart->Instance == UART5)

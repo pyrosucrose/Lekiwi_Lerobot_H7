@@ -125,7 +125,13 @@ void MotorSts::UpdateAll()
         if (motors_[i]->received_pack_)
             motors_[i]->UnpackData();
         if (tick_now - motors_[i]->last_ack_tick_ >= TIMEOUT_TICK)
-            motors_[i]->Clear();
+            motors_[i]->Reload(tick_now);
+        if (tick_now - last_ack_all_ >= TIMEOUT_TICK)
+        {
+            connected_ = false;
+            last_ack_all_ = tick_now;
+            Uart10_Restart();
+        }
     }
 }
 
@@ -245,13 +251,14 @@ void MotorSts::UnpackData()
 /**
  * @brief 重置电机状态机，在电机超时时调用
  */
-void MotorSts::Clear()
+void MotorSts::Reload(const uint32_t tick_now)
 {
     is_online_ = false;
     is_param_set_ = false;
     received_pack_ = false;
     in_use_ = false;
     is_unpacking_ = false;
+    last_ack_tick_ = tick_now;
 }
 
 /**

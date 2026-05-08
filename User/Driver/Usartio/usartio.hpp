@@ -30,4 +30,5 @@ extern uint8_t uart_sts_rx_buffer[UART_STS_RX_BUFFER_SIZE];
 extern uint8_t uart_sts_tx_buffer[UART_STS_TX_BUFFER_SIZE];
 
 void Usartio_Init();
+void Uart10_Restart();
 uint8_t usart_printf(const char *format, ...);

@@ -139,6 +139,7 @@ public:
     static void ReadAll(REG s, REG e);
     static void WriteAll(REG r, uint16_t v);
     static void Init();
+    [[nodiscard]] static bool IsConnected() { return connected_; }
 
     void SetSoftTargetPos_Ecd(int16_t t);
     void SetSoftTargetPos_Rad(const float t)    { SetSoftTargetPos_Ecd(Rad2Ecd(t)); }
@@ -150,6 +151,7 @@ public:
     [[nodiscard]] bool IsSafePos_Rad(const float p)   const { return IsSafePos_Ecd(Rad2Ecd(p)); }
 
     [[nodiscard]] bool IsReversed() const { return is_reversed_; }
+    [[nodiscard]] bool IsOnline() const { return is_online_; }
     [[nodiscard]] uint8_t GetID() const { return ID_; }
 
     [[nodiscard]] uint16_t GetHardTargetVel_Ecd() const { return target_vel_ecd_; }
@@ -173,7 +175,7 @@ private:
     static int16_t  PackStsData(uint8_t L, uint8_t H);
     static uint16_t ConvertStsData(uint16_t s);
     static bool     IsLowByteReg(REG reg);
-    void Clear();
+    void Reload(uint32_t tick_now);
     void ClampPos() { target_pos_ecd_ = utils::Clamp(target_pos_ecd_, min_pos_ecd_, max_pos_ecd_); }
     [[nodiscard]] static int16_t  Rad2Ecd(const float v) { return static_cast<int16_t>(utils::Rad2Round(v) * ENCODER_RESOLUTION); }
     [[nodiscard]] static float    Ecd2Rad(const int16_t v) { return utils::Round2Rad(v) / static_cast<float>(ENCODER_RESOLUTION); }
@@ -212,4 +214,6 @@ private:
     static inline uint8_t motors_count_{0};                    // 电机数量，构造与析构时被修改
     static inline MotorSts* motors_[MAX_MOTORS_COUNT]{};     // 静态电机列表，负责维护并批量处理所有电机
     static inline uint8_t motors_idx_[MAX_MOTOR_ID + 1]{};   // 电机ID索引列表，记录每个ID的电机在motors_中的索引(没错，有相同ID的电机的话就是UB)
+    static inline uint32_t last_ack_all_{0};
+    static inline bool connected_{false};
 };
