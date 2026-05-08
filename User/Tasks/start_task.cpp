@@ -68,9 +68,9 @@ void TASK_CreateTask(void *pv)
     xReturn &=
         xTaskCreate((TaskFunction_t) DebugTask,
         "DebugTask",
-        128,
+        256,
         nullptr,
-        1,
+        2,
         &debug_task_handle);
 
     xReturn &=
