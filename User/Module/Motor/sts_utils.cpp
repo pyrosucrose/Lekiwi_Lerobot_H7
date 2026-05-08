@@ -108,17 +108,20 @@ MotorSts::~MotorSts()
 }
 
 /**
- * @brief   批量解包
+ * @brief   更新所有电机数据
  * @details 对于有新数据返回的电机，调用UnpackData来解析
+ * @details 对所有电机更新计时器，若超时则认为电机掉线，重置其状态机
  * @note    该函数应该在主循环或任务中由用户手动调用
  */
-void MotorSts::UnpackAll()
+void MotorSts::UpdateAll()
 {
     for (uint8_t i = 0; i < motors_count_; i++)
     {
+        const auto tick_now = HAL_GetTick();
         if (motors_[i]->received_pack_)
             motors_[i]->UnpackData();
-        motors_[i]->in_use_ = false;
+        if (tick_now - motors_[i]->last_ack_tick_ >= TIMEOUT_TICK)
+            motors_[i]->Clear();
     }
 }
 
@@ -131,7 +134,7 @@ void MotorSts::UnpackAll()
 void MotorSts::UnpackData()
 {
     is_unpacking_ = true;
-    status_ = rx_buffer_[1]; error_ = status_;  // 错误码处理
+    status_ = rx_buffer_[1];
 
     bool boundary_flag = false;
     for (uint8_t i = 2, cnt = 0; cnt < rx_buffer_[0] - 2; i++, cnt++)
@@ -230,6 +233,18 @@ void MotorSts::UnpackData()
         }
     }
     ack_l_ = 0xFF; ack_h_ = 0x00;
+    received_pack_ = false;
+    in_use_ = false;
+    is_unpacking_ = false;
+}
+
+/**
+ * @brief 重置电机状态机，在电机超时时调用
+ */
+void MotorSts::Clear()
+{
+    is_online_ = false;
+    is_param_set_ = false;
     received_pack_ = false;
     in_use_ = false;
     is_unpacking_ = false;

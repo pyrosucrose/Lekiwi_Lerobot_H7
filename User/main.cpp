@@ -50,7 +50,7 @@ void User_Init()
             motor5.GetSoftPos_One(),
             motor6.GetSoftPos_One()
             );
-        MotorSts::UnpackAll();
+        MotorSts::UpdateAll();
         // Delay::Delay_ms(1000);
         // usart_printf("1\n");
         // Delay::DelayUntil_us(&s,50000);

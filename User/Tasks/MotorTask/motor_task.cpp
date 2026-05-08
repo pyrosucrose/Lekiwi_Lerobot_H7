@@ -13,7 +13,7 @@ void MotorTask(void *pv)
     portTickType current_time = xTaskGetTickCount();
     while (true)
     {
-        MotorSts::UnpackAll();
+        MotorSts::UpdateAll();
         vTaskDelayUntil(&current_time, pdMS_TO_TICKS(TASK_MOTOR_TASK_PERIOD));
     }
 }

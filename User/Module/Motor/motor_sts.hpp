@@ -16,6 +16,7 @@ class MotorSts
 
     static constexpr uint8_t MAX_MOTORS_COUNT   = 20;       // 最大电机数量(多了可能加重负担，但实际应该不太影响)
     static constexpr uint8_t MAX_BUF_LEN        = 32;       // 每个电机私有缓冲区长度(不要太大，大了会显著加重堆栈/RAM负担)
+    static constexpr uint16_t TIMEOUT_TICK      = 100;
     static constexpr bool DEBUG_MODE            = false;    // 调试模式(开启后将会在串口重定向中输出解包数据)
 public:
     typedef enum : uint8_t
@@ -123,16 +124,16 @@ public:
     MotorSts(uint8_t ID, uint16_t zero_point, uint16_t min_angle, uint16_t max_angle, bool reversed = false);
     ~MotorSts();
 
+    void UnpackData();
     void AddReadReg(REG r);
     void AddReadRangeByCount(REG s, uint8_t c);
     void AddReadRange(REG s, REG e);
     void SetReadRange(REG s, REG e);
     void TransmitReadCommand();
     void TransmitWriteCommand(REG r, uint16_t v) const;
-    void UnpackData();
 
     static void RxCallback(const uint8_t* data);
-    static void UnpackAll();
+    static void UpdateAll();
     static void ControlAll();
     static void ReadAll(REG s, REG e);
     static void WriteAll(REG r, uint16_t v);
@@ -171,6 +172,7 @@ private:
     static int16_t  PackStsData(uint8_t L, uint8_t H);
     static uint16_t ConvertStsData(uint16_t s);
     static bool     IsLowByteReg(REG reg);
+    void Clear();
     void ClampPos() { target_pos_ecd_ = utils::Clamp(target_pos_ecd_, min_pos_ecd_, max_pos_ecd_); }
     [[nodiscard]] static int16_t  Rad2Ecd(const float v) { return static_cast<int16_t>(utils::Rad2Round(v) * ENCODER_RESOLUTION); }
     [[nodiscard]] static float    Ecd2Rad(const int16_t v) { return utils::Round2Rad(v) / static_cast<float>(ENCODER_RESOLUTION); }
@@ -184,28 +186,29 @@ private:
     uint16_t min_pos_ecd_;  int16_t soft_min_pos_ecd_;
     uint16_t max_pos_ecd_;  int16_t soft_max_pos_ecd_;
 
-    uint16_t pos_ecd_ = 0;  int16_t soft_pos_ecd = 0;
-    uint16_t vel_ecd_ = 0;  int16_t soft_vel_ecd = 0;
-    int16_t load_ecd_ = 0;
-    uint8_t volt_ecd_ = 0;
-    uint8_t temp_ecd_ = 0;
-    int16_t cur_ecd_ = 0;
+    uint16_t pos_ecd_{0};  int16_t soft_pos_ecd{0};
+    uint16_t vel_ecd_{0};  int16_t soft_vel_ecd{0};
+    int16_t load_ecd_{0};
+    uint8_t volt_ecd_{0};
+    uint8_t temp_ecd_{0};
+    int16_t cur_ecd_{0};
 
-    uint16_t target_vel_ecd_ = 32767;   int16_t soft_target_vel_ecd_ = 32767;
-    uint16_t target_pos_ecd_ = 0;       int16_t soft_target_pos_ecd_ = 0;
+    uint16_t target_vel_ecd_{32767};   int16_t soft_target_vel_ecd_{32767};
+    uint16_t target_pos_ecd_{0};       int16_t soft_target_pos_ecd_{0};
 
-    uint8_t cmd_l_ = 0xFF, cmd_h_ = 0x00;   // 设置读取寄存器时被置位，读取指令发送时被复位
-    uint8_t ack_l_ = 0xFF, ack_h_ = 0x00;   // 读取指令发送时被上面的置位，解析完成后被复位
-    uint8_t status_ = 0;
-    bool error_ = false;
-    bool is_param_set_ = false;     // 设置参数时置位以被ControlAll调用发送，发送后复位
-    bool received_pack_ = false;    // 有匹配该ID的回调时置位以执行Unpack指令(即使未成功写入也会置位防止卡死)，解包返回帧后复位
-    bool in_use_ = false;           // 发送读指令后置位以防止回调完成之前被再次执行读指令，解包返回帧后复位
-    bool is_unpacking_ = false;     // 开始解包时置位以阻止中断回调写入数据，解包完成后复位
+    uint32_t last_ack_tick_{0};
+    uint8_t cmd_l_{0xFF}, cmd_h_{0xFF};   // 设置读取寄存器时被置位，读取指令发送时被复位
+    uint8_t ack_l_{0xFF}, ack_h_{0xFF};   // 读取指令发送时被上面的置位，解析完成后被复位
+    uint8_t status_{0};
+    bool is_online_{false};
+    bool is_param_set_{false};     // 设置参数时置位以被ControlAll调用发送，发送后复位
+    bool received_pack_{false};    // 有匹配该ID的回调时置位以执行Unpack指令(即使未成功写入也会置位防止卡死)，解包返回帧后复位
+    bool in_use_{false};           // 发送读指令后置位以防止回调完成之前被再次执行读指令，解包返回帧后复位
+    bool is_unpacking_{false};     // 开始解包时置位以阻止中断回调写入数据，解包完成后复位
 
-    uint8_t rx_buffer_[MAX_BUF_LEN] = {};
+    uint8_t rx_buffer_[MAX_BUF_LEN]{};
 
-    static inline uint8_t motors_count_ = 0;                    // 电机数量，构造与析构时被修改
-    static inline MotorSts* motors_[MAX_MOTORS_COUNT] = {};     // 静态电机列表，负责维护并批量处理所有电机
-    static inline uint8_t motors_idx_[MAX_MOTOR_ID + 1] = {};   // 电机ID索引列表，记录每个ID的电机在motors_中的索引(没错，有相同ID的电机的话就是UB)
+    static inline uint8_t motors_count_{0};                    // 电机数量，构造与析构时被修改
+    static inline MotorSts* motors_[MAX_MOTORS_COUNT]{};     // 静态电机列表，负责维护并批量处理所有电机
+    static inline uint8_t motors_idx_[MAX_MOTOR_ID + 1]{};   // 电机ID索引列表，记录每个ID的电机在motors_中的索引(没错，有相同ID的电机的话就是UB)
 };
