@@ -15,10 +15,10 @@ inline constexpr uint16_t UART_STS_TX_BUFFER_SIZE = 255;
 
 typedef enum : uint8_t
 {
-    USART_PRINTF_TRANSMIT = 0,
-    USART_PRINTF_BUFFER_OVERFLOW = 1,
-    USART_PRINTF_WAITING = 2,
-    USART_PRINTF_WRONG_LEN = 3,
+    USART_TRANSMIT = 0,
+    USART_BUFFER_OVERFLOW = 1,
+    USART_WAITING = 2,
+    USART_WRONG_LEN = 3,
 } eUsartStatus;
 
 extern DMA_HandleTypeDef hdma_usart1_tx;

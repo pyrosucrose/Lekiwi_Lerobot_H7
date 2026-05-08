@@ -36,7 +36,7 @@ uint8_t TryStartTransmit();
 void Usartio_Init()
 {
     HAL_UARTEx_ReceiveToIdle_DMA(&huart5, uart5_rx_buffer, UART5_RX_BUFFER_SIZE);
-    HAL_UARTEx_ReceiveToIdle_DMA(&huart_sts, uart_sts_rx_buffer, UART_STS_RX_BUFFER_SIZE);
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart10, uart_sts_rx_buffer, UART_STS_RX_BUFFER_SIZE);
     __HAL_DMA_DISABLE_IT(&hdma_uart5_rx, DMA_IT_HT);
     __HAL_DMA_DISABLE_IT(&hdma_usart10_rx, DMA_IT_HT);
 }
@@ -58,7 +58,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
         {
             MotorSts::RxCallback(uart_sts_rx_buffer);
         }
-        HAL_UARTEx_ReceiveToIdle_DMA(&huart_sts, uart_sts_rx_buffer, UART_STS_RX_BUFFER_SIZE);
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart10, uart_sts_rx_buffer, UART_STS_RX_BUFFER_SIZE);
         // usart_printf("%f\n",Delay::CalculateInterval_us(s));
     }
 
@@ -85,7 +85,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 uint8_t TryStartTransmit()
 {
     if (tx_ring.is_transmitting || tx_ring.write_idx == tx_ring.transmit_idx)
-        return USART_PRINTF_WAITING;
+        return USART_WAITING;
 
     const uint8_t current_transmit_idx = tx_ring.transmit_idx;
 
@@ -95,7 +95,7 @@ uint8_t TryStartTransmit()
         tx_ring.is_transmitting = true;
     else
         Buzzer::AddToNoteTrack(3000, 2000);
-    return USART_PRINTF_TRANSMIT;
+    return USART_TRANSMIT;
 }
 
 uint8_t usart_printf(const char *format, ...)
@@ -108,13 +108,13 @@ uint8_t usart_printf(const char *format, ...)
     if (next_write_idx == tx_ring.transmit_idx)
     {
         va_end(args);
-        return USART_PRINTF_BUFFER_OVERFLOW;
+        return USART_BUFFER_OVERFLOW;
     }
 
     const uint32_t len = vsnprintf((char*)tx_ring.buffers[tx_ring.write_idx], UART_TX_BUFFER_SIZE, format, args);
     va_end(args);
 
-    if (len <= 0) return USART_PRINTF_WRONG_LEN;
+    if (len <= 0) return USART_WRONG_LEN;
 
     tx_ring.lengths[tx_ring.write_idx] = static_cast<uint16_t>(len);
     tx_ring.write_idx = next_write_idx;

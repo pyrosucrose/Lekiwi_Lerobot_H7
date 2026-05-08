@@ -158,7 +158,7 @@ void LekiwiArm::TransmitBusControlCmd()
     check_sum = ~check_sum;
     uart_sts_tx_buffer[idx++] = check_sum;
 
-    HAL_UART_Transmit_DMA(&huart_sts, uart_sts_tx_buffer, idx);
+    HAL_UART_Transmit_DMA(&huart10, uart_sts_tx_buffer, idx);
 }
 
 void LekiwiArm::DisableAll()
@@ -185,7 +185,7 @@ void LekiwiArm::DisableAll()
 
     uart_sts_tx_buffer[idx++] = ~check_sum;
 
-    HAL_UART_Transmit_DMA(&huart_sts, uart_sts_tx_buffer, idx);
+    HAL_UART_Transmit_DMA(&huart10, uart_sts_tx_buffer, idx);
 }
 
 void LekiwiArm::ControlLoop()

@@ -74,7 +74,7 @@ void MotorSts::TransmitReadCommand()
         check_sum += uart_sts_tx_buffer[i];
     uart_sts_tx_buffer[idx++] = ~check_sum;                 // CheckSum
 
-    if (HAL_UART_Transmit_DMA(&huart_sts, uart_sts_tx_buffer, idx) == HAL_OK)
+    if (HAL_UART_Transmit_DMA(&huart10, uart_sts_tx_buffer, idx) == HAL_OK)
     {
         in_use_ = true;
         ack_l_ = cmd_l_;
@@ -115,7 +115,7 @@ void MotorSts::TransmitWriteCommand(const REG r, uint16_t v) const
         check_sum += uart_sts_tx_buffer[i];
     uart_sts_tx_buffer[idx++] = ~check_sum;
 
-    HAL_UART_Transmit_DMA(&huart_sts, uart_sts_tx_buffer, idx);
+    HAL_UART_Transmit_DMA(&huart10, uart_sts_tx_buffer, idx);
 }
 
 /**
@@ -158,7 +158,7 @@ void MotorSts::ControlAll()
         check_sum += uart_sts_tx_buffer[i];
     uart_sts_tx_buffer[idx++] = ~check_sum;
 
-    if (HAL_UART_Transmit_DMA(&huart_sts, uart_sts_tx_buffer, idx) == HAL_OK)
+    if (HAL_UART_Transmit_DMA(&huart10, uart_sts_tx_buffer, idx) == HAL_OK)
         for (uint8_t i = 0; i < motors_count_; i++)
         {
             // if (!motors_[i]->is_param_set_) continue; // 实际不需要，因为无论过程如何结果都一样()
@@ -199,7 +199,7 @@ void MotorSts::ReadAll(REG s, REG e)
         check_sum += uart_sts_tx_buffer[i];
     uart_sts_tx_buffer[idx++] = ~check_sum;
 
-    if (HAL_UART_Transmit_DMA(&huart_sts, uart_sts_tx_buffer, idx) == HAL_OK)
+    if (HAL_UART_Transmit_DMA(&huart10, uart_sts_tx_buffer, idx) == HAL_OK)
         for (uint8_t i = 0; i < motors_count_; i++)
         {
             // if (motors_[i]->in_use_) continue; // 实际不需要，因为无论过程如何结果都一样()
@@ -248,7 +248,7 @@ void MotorSts::WriteAll(const REG r, uint16_t v)
         check_sum += uart_sts_tx_buffer[i];
     uart_sts_tx_buffer[idx++] = ~check_sum;                 // CheckSum
 
-    HAL_UART_Transmit_DMA(&huart_sts, uart_sts_tx_buffer, idx);
+    HAL_UART_Transmit_DMA(&huart10, uart_sts_tx_buffer, idx);
 }
 
 /**

@@ -65,7 +65,7 @@ void LekiwiChassis::TransmitBusControlCmd()
 
     uart_sts_tx_buffer[idx++] = ~check_sum;
 
-    HAL_UART_Transmit_DMA(&huart_sts, uart_sts_tx_buffer, idx);
+    HAL_UART_Transmit_DMA(&huart10, uart_sts_tx_buffer, idx);
 }
 
 void LekiwiChassis::DisableAll()
@@ -92,7 +92,7 @@ void LekiwiChassis::DisableAll()
 
     uart_sts_tx_buffer[idx++] = ~check_sum;
     // 发送
-    HAL_UART_Transmit_DMA(&huart_sts, uart_sts_tx_buffer, idx);
+    HAL_UART_Transmit_DMA(&huart10, uart_sts_tx_buffer, idx);
 }
 
 void LekiwiChassis::ControlLoop()
