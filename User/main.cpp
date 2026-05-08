@@ -15,7 +15,8 @@ void User_Init()
     Usartio_Init();
     Buzzer::Init();
     Delay::Init();
-    MotorSts::Init();
+    if constexpr (!MotorSts::USE_MOTOR_POS_LIMIT)
+        MotorSts::Init();
     TASK_StartInit();
 }
 

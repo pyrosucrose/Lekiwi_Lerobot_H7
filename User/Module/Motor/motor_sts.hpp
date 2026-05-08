@@ -11,14 +11,15 @@ class MotorSts
     friend class LekiwiArm;         // TODO 完工后去掉
     friend class LekiwiChassis;     // TODO 完工后去掉
 
-    static constexpr uint16_t ENCODER_RESOLUTION = 4096;    // 不能改，除非协议变动 // 电机编码器分辨率(刻度/圈)
-    static constexpr uint8_t MAX_MOTOR_ID       = 0xFD;     // 不能改，除非协议变动 // 最大电机的ID
-
     static constexpr uint8_t MAX_MOTORS_COUNT   = 20;       // 最大电机数量(多了可能加重负担，但实际应该不太影响)
     static constexpr uint8_t MAX_BUF_LEN        = 32;       // 每个电机私有缓冲区长度(不要太大，大了会显著加重堆栈/RAM负担)
-    static constexpr uint16_t TIMEOUT_TICK      = 100;
+    static constexpr uint16_t TIMEOUT_TICK      = 100;      // 超时阈值(ms)
     static constexpr bool DEBUG_MODE            = false;    // 调试模式(开启后将会在串口重定向中输出解包数据)
+
+    static constexpr uint16_t ENCODER_RESOLUTION = 4096;    // 不能改，除非协议变动 // 电机编码器分辨率(刻度/圈)
+    static constexpr uint8_t MAX_MOTOR_ID       = 0xFD;     // 不能改，除非协议变动 // 最大电机的ID
 public:
+    static constexpr bool USE_MOTOR_POS_LIMIT   = true;     // 是否采用电机的编码器角度值，设为true后上电会读取已注册在 Init 前的所有电机的角度限制
     typedef enum : uint8_t
     {
         PING        = 0x01, // 查询电机状态

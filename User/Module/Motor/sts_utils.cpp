@@ -70,10 +70,14 @@ MotorSts::MotorSts(const uint8_t ID, const uint16_t zero_point, const uint16_t m
 {
     if (motors_count_ < MAX_MOTORS_COUNT)
     {
-        motors_[motors_count_] = this;
         if (motors_idx_[ID] != 0x00 && motors_idx_[ID] != Special::ILLEGAL_ID)  // 没辙，否则idx_必须手动写255个0xFF进去
             // 你是不是注册了ID相同的电机 o_O
             Crash();
+        if constexpr (!USE_MOTOR_POS_LIMIT)
+            if (min_angle >= max_angle)
+                // 最大角度和最小角度都是绝对的编码器值，不是软件限制值，所以小的必须是小的
+                Crash();
+        motors_[motors_count_] = this;
         motors_idx_[ID] = motors_count_;
         motors_count_++;
     }
