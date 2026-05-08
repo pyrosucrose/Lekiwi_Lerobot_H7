@@ -15,7 +15,7 @@ void RobotSendTask(void *pv)
     portTickType current_time = xTaskGetTickCount();
     while (true)
     {
-        robot_lekiwi.SendControl();
+        RobotLekiwi::SendControl();
         vTaskDelayUntil(&current_time, pdMS_TO_TICKS(TASK_ROBOT_SEND_TASK_PERIOD));
     }
 }

@@ -41,58 +41,58 @@ void LekiwiChassis::SolveWheelSpeed()
 void LekiwiChassis::TransmitBusControlCmd()
 {
     uint8_t idx = 0;
-    uart_sts_tx_buffer[idx++] = 0xFF;
-    uart_sts_tx_buffer[idx++] = 0xFF;
-    uart_sts_tx_buffer[idx++] = MotorSts::Special::MASTER_ID;
-    uart_sts_tx_buffer[idx++] = MotorSts::Special::DUMMY;
-    uart_sts_tx_buffer[idx++] = MotorSts::Command::SYN_WRITE;
-    uart_sts_tx_buffer[idx++] = static_cast<uint8_t>(MotorSts::REG::TARGET_SPEED_L);
-    uart_sts_tx_buffer[idx++] = 0x02;
+    uart10_tx_buffer[idx++] = 0xFF;
+    uart10_tx_buffer[idx++] = 0xFF;
+    uart10_tx_buffer[idx++] = MotorSts::Special::MASTER_ID;
+    uart10_tx_buffer[idx++] = MotorSts::Special::DUMMY;
+    uart10_tx_buffer[idx++] = MotorSts::Command::SYN_WRITE;
+    uart10_tx_buffer[idx++] = static_cast<uint8_t>(MotorSts::REG::TARGET_SPEED_L);
+    uart10_tx_buffer[idx++] = 0x02;
 
     for (const auto& motor : motors)
     {
         const uint16_t val = MotorSts::ConvertStsData(motor.GetHardTargetVel_Ecd());
 
-        uart_sts_tx_buffer[idx++] = motor.GetID();
-        uart_sts_tx_buffer[idx++] = val;
-        uart_sts_tx_buffer[idx++] = val >> 8;
+        uart10_tx_buffer[idx++] = motor.GetID();
+        uart10_tx_buffer[idx++] = val;
+        uart10_tx_buffer[idx++] = val >> 8;
     }
-    uart_sts_tx_buffer[3] = idx - 3;                          // FrameLength
+    uart10_tx_buffer[3] = idx - 3;                          // FrameLength
 
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < idx; i++)
-        check_sum += uart_sts_tx_buffer[i];
+        check_sum += uart10_tx_buffer[i];
 
-    uart_sts_tx_buffer[idx++] = ~check_sum;
+    uart10_tx_buffer[idx++] = ~check_sum;
 
-    HAL_UART_Transmit_DMA(&huart10, uart_sts_tx_buffer, idx);
+    HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx);
 }
 
 void LekiwiChassis::DisableAll()
 {
     uint8_t idx = 0;
-    uart_sts_tx_buffer[idx++] = 0xFF;
-    uart_sts_tx_buffer[idx++] = 0xFF;
-    uart_sts_tx_buffer[idx++] = MotorSts::Special::MASTER_ID;
-    uart_sts_tx_buffer[idx++] = MotorSts::Special::DUMMY;
-    uart_sts_tx_buffer[idx++] = MotorSts::Command::SYN_WRITE;
-    uart_sts_tx_buffer[idx++] = static_cast<uint8_t>(MotorSts::REG::TORQUE_SWITCH);
-    uart_sts_tx_buffer[idx++] = 0x01;
+    uart10_tx_buffer[idx++] = 0xFF;
+    uart10_tx_buffer[idx++] = 0xFF;
+    uart10_tx_buffer[idx++] = MotorSts::Special::MASTER_ID;
+    uart10_tx_buffer[idx++] = MotorSts::Special::DUMMY;
+    uart10_tx_buffer[idx++] = MotorSts::Command::SYN_WRITE;
+    uart10_tx_buffer[idx++] = static_cast<uint8_t>(MotorSts::REG::TORQUE_SWITCH);
+    uart10_tx_buffer[idx++] = 0x01;
 
     for (const auto& motor : motors)
     {
-        uart_sts_tx_buffer[idx++] = motor.GetID();
-        uart_sts_tx_buffer[idx++] = MotorSts::TorqueSwitch::OFF;
+        uart10_tx_buffer[idx++] = motor.GetID();
+        uart10_tx_buffer[idx++] = MotorSts::TorqueSwitch::OFF;
     }
-    uart_sts_tx_buffer[3] = idx - 3;                          // FrameLength
+    uart10_tx_buffer[3] = idx - 3;                          // FrameLength
 
     uint8_t check_sum = 0;
     for (uint8_t i = 2; i < idx; i++)
-        check_sum += uart_sts_tx_buffer[i];
+        check_sum += uart10_tx_buffer[i];
 
-    uart_sts_tx_buffer[idx++] = ~check_sum;
+    uart10_tx_buffer[idx++] = ~check_sum;
     // 发送
-    HAL_UART_Transmit_DMA(&huart10, uart_sts_tx_buffer, idx);
+    HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx);
 }
 
 void LekiwiChassis::ControlLoop()

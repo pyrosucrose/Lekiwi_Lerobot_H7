@@ -11,7 +11,7 @@ class RobotLekiwi
 {
 public:
     void ControlLoop();
-    void SendControl();
+    static void SendControl();
 
     LekiwiArm arm;
     LekiwiChassis chassis;
