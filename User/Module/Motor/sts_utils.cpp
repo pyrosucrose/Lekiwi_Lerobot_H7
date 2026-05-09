@@ -14,11 +14,10 @@
  * @param   H: 高位数据(数组后)
  * @retval  拼接后数据，为int16
  */
-int16_t MotorSts::PackStsData(const uint8_t L, const uint8_t H)
+int16_t MotorSts::PackStsData(const uint8_t L, const uint8_t H, const uint8_t s)
 {
-    auto s = static_cast<int16_t>(H << 8 | L);
-    if ((s & 0x8000) != 0) s = static_cast<int16_t>(-(s & 0x7FFF));
-    return s;
+    const auto v = static_cast<int16_t>(H << 8 | L);
+    return v & (1 << s) ? static_cast<int16_t>(-(v & ((1 << s) - 1))) : static_cast<int16_t>(v & ((1 << s) - 1));
 }
 
 /**
@@ -30,9 +29,9 @@ int16_t MotorSts::PackStsData(const uint8_t L, const uint8_t H)
  * @note    虽然声明传入的是uint16，但传int16也是一样的
  * @note    想出这样处理(u)int16的家里清明节指定能多出些什么来
  */
-uint16_t MotorSts::ConvertStsData(const int16_t d, const uint8_t s)
+uint16_t MotorSts::ConvertStsData(const uint16_t d, const uint8_t s)
 {
-    return d < 0 ? (abs(d) & ((1 << s) - 1)) | (1 << s) : d & ((1 << s) - 1);
+    return d & (1 << s) ? (abs(static_cast<int16_t>(d)) & ((1 << s) - 1)) | (1 << s) : d & ((1 << s) - 1);
 }
 
 /**
@@ -61,6 +60,7 @@ bool MotorSts::IsLowByteReg(const REG r)
  * @param   min_angle   :电机所有允许的姿态下，编码器最小值
  * @param   max_angle   :电机所有允许的姿态下，编码器最大值
  * @param   reversed    :是否反转，和安装方式相关(若用户期望的电机方向和点击实际方向相反就设为true)
+ * @param   mode        :电机模式(位控/速控/PWM/步进模式)
  * @note    若从这进了Crash那可能是电机ID冲突或是注册的电机过多导致超出MAX_MOTORS_COUNT，需要修正或修改相关配置
  * @warning 对于重复ID的处理能力有限，用户必须保证没用重复ID的电机被写入！
  */
@@ -168,7 +168,10 @@ void MotorSts::UnpackData()
             vel_ecd_  = PackStsData(rx_buffer_[i], rx_buffer_[i + 1]);
             soft_vel_ecd_ = static_cast<int16_t>(is_reversed_ ? -vel_ecd_ : vel_ecd_);
             break;
-        case REG::NOW_LOAD_L:    load_ecd_ = PackStsData(rx_buffer_[i], rx_buffer_[i + 1]); break;
+        case REG::NOW_LOAD_L:
+            load_ecd_ = PackStsData(rx_buffer_[i], rx_buffer_[i + 1], 10);
+            soft_load_ecd_ =  static_cast<int16_t>(is_reversed_ ? -load_ecd_ : load_ecd_);
+            break;
         case REG::NOW_VOLT:      volt_ecd_ = rx_buffer_[i]; break;
         case REG::NOW_TEMP:      temp_ecd_ = rx_buffer_[i]; break;
         case REG::NOW_CURRENT_L: cur_ecd_  = PackStsData(rx_buffer_[i], rx_buffer_[i + 1]); break;

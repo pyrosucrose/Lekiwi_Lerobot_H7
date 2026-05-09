@@ -16,7 +16,7 @@ class MotorSts
     static constexpr uint16_t TIMEOUT_TICK      = 100;      // 超时阈值(ms)
     static constexpr bool DEBUG_MODE            = false;    // 调试模式(开启后将会在串口重定向中输出解包数据)
 
-    static constexpr uint16_t ENCODER_RESOLUTION = 4096;    // 不能改，除非协议变动 // 电机编码器分辨率(刻度/圈)
+    static constexpr uint16_t ECD_RESOLUTION    = 4096;     // 不能改，除非协议变动 // 电机编码器分辨率(刻度/圈)
     static constexpr uint8_t MAX_MOTOR_ID       = 0xFD;     // 不能改，除非协议变动 // 最大电机的ID
 public:
     static constexpr bool USE_MOTOR_POS_LIMIT   = true;     // 是否采用电机的编码器角度值，设为true后上电会读取已注册在 Init 前的所有电机的角度限制
@@ -184,19 +184,19 @@ public:
     [[nodiscard]] float    GetSoftPos_Rad()       const { return Ecd2Rad_Pos(GetSoftPos_Ecd()); }
     [[nodiscard]] float    GetSoftPos_One()       const { return Ecd2One_Pos(GetSoftPos_Ecd()); }
     [[nodiscard]] int16_t  GetSoftLoad_Ecd()      const { return load_ecd_; }
-    [[nodiscard]] float    GetSoftLoad_One()      const { return Ecd2One_Load(GetSoftTargetLoad_Ecd()); }
+    [[nodiscard]] float    GetSoftLoad_One()      const { return Ecd2One_Load(GetSoftLoad_Ecd()); }
 
 
 private:
-    static int16_t  PackStsData(uint8_t L, uint8_t H);
-    static uint16_t ConvertStsData(int16_t d, uint8_t s = 15);
+    static int16_t  PackStsData(uint8_t L, uint8_t H, uint8_t s = 15);
+    static uint16_t ConvertStsData(uint16_t d, uint8_t s = 15);
     static bool     IsLowByteReg(REG r);
     void Reload(uint32_t tick_now);
     void ClampPos() { target_pos_ecd_ = utils::Clamp(target_pos_ecd_, min_pos_ecd_, max_pos_ecd_); }
-    [[nodiscard]] static int16_t  Rad2Ecd_Pos(const float v) { return static_cast<int16_t>(utils::Rad2Round(v) * ENCODER_RESOLUTION); }
-    [[nodiscard]] static float    Ecd2Rad_Pos(const int16_t v) { return utils::Round2Rad(v) / static_cast<float>(ENCODER_RESOLUTION); }
-    [[nodiscard]] static int16_t  One2Ecd_Load(const float v) { return v * 1000; }
-    [[nodiscard]] static float    Ecd2One_Load(const int16_t v) { return v / 1000.0f; }
+    [[nodiscard]] static int16_t  Rad2Ecd_Pos(const float v) { return static_cast<int16_t>(utils::Rad2Round(v) * ECD_RESOLUTION); }
+    [[nodiscard]] static float    Ecd2Rad_Pos(const int16_t v) { return utils::Round2Rad(v) / static_cast<float>(ECD_RESOLUTION); }
+    [[nodiscard]] static int16_t  One2Ecd_Load(const float v) { return static_cast<int16_t>(v * 1000.0f); }
+    [[nodiscard]] static float    Ecd2One_Load(const int16_t v) { return static_cast<float>(v) / 1000.0f; }
 
     [[nodiscard]] float   Ecd2One_Pos(const int16_t v) const { return utils::Map(v, soft_min_pos_ecd_, soft_max_pos_ecd_, 0.0f, 1.0f); }
     [[nodiscard]] int16_t One2Ecd_Pos(const float v) const { return static_cast<int16_t>(utils::Map(v, 0.0f, 1.0f, soft_min_pos_ecd_, soft_max_pos_ecd_)); }
@@ -209,7 +209,7 @@ private:
 
     uint16_t pos_ecd_{2048};    int16_t soft_pos_ecd_{2048};
     uint16_t vel_ecd_{0};       int16_t soft_vel_ecd_{0};
-    int16_t load_ecd_{0};
+    int16_t load_ecd_{0};       int16_t soft_load_ecd_{0};
     uint8_t volt_ecd_{0};
     uint8_t temp_ecd_{0};
     int16_t cur_ecd_{0};
@@ -219,6 +219,7 @@ private:
     uint16_t target_vel_ecd_{32767};    int16_t soft_target_vel_ecd_{32767};
     uint16_t max_load_ecd{1000};
 
+    uint32_t last_ack_tick_{0};
     uint8_t cmd_l_{0xFF}, cmd_h_{0xFF};   // 设置读取寄存器时被置位，读取指令发送时被复位
     uint8_t ack_l_{0xFF}, ack_h_{0xFF};   // 读取指令发送时被上面的置位，解析完成后被复位
     uint8_t status_{0};
@@ -227,7 +228,6 @@ private:
     bool received_pack_{false};    // 有匹配该ID的回调时置位以执行Unpack指令(即使未成功写入也会置位防止卡死)，解包返回帧后复位
     bool in_use_{false};           // 发送读指令后置位以防止回调完成之前被再次执行读指令，解包返回帧后复位
     bool is_unpacking_{false};     // 开始解包时置位以阻止中断回调写入数据，解包完成后复位
-    uint32_t last_ack_tick_{0};
 
     uint8_t rx_buffer_[MAX_BUF_LEN]{};
 

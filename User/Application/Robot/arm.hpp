@@ -18,7 +18,7 @@ public:
         {3,2214,883 ,3080,true ,MotorSts::Mode::POSITIONAL},
         {4,1985,862 ,2900,true ,MotorSts::Mode::POSITIONAL},
         {5,2057,300 ,3980,true ,MotorSts::Mode::POSITIONAL},
-        {6,1412,1400,2870,false,MotorSts::Mode::POSITIONAL},
+        {6,1412,1530,2800,false,MotorSts::Mode::POSITIONAL},
         },
 
         controller
@@ -28,7 +28,7 @@ public:
         {13,2457,1131,3330,true ,MotorSts::Mode::POSITIONAL},
         {14,1671,480 ,2762,true ,MotorSts::Mode::POSITIONAL},
         {15,1503,132 ,3965,true ,MotorSts::Mode::POSITIONAL},
-        {16,1702,1668,3015,false,MotorSts::Mode::POSITIONAL},
+        {16,2702,2654,3840,false,MotorSts::Mode::PWM},
         }
     {}
     void DeSolve() const;
@@ -38,8 +38,8 @@ public:
 
     void GetDataFromRc();
     bool Solve();
-    void SolveEnd();
     void Follow();
+    void ResetGripper();
 
     // float target_x = 110.0f, target_y = -110.0f, target_theta = -1.0f;
     // float target_x = 40.0f, target_y = 40.0f, target_theta = -1.0f;

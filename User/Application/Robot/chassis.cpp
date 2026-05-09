@@ -38,6 +38,15 @@ void LekiwiChassis::SolveWheelSpeed()
         motors[i].SetSoftTargetVel_Ecd(static_cast<int16_t>(target_wheel_speed[i]));
 }
 
+void LekiwiChassis::ControlLoop()
+{
+    if (rc_data.IsRcOnline())
+    {
+        GetDataFromRc();
+        SolveWheelSpeed();
+    }
+}
+
 void LekiwiChassis::TransmitBusControlCmd()
 {
     uint8_t idx = 0;
@@ -93,13 +102,4 @@ void LekiwiChassis::DisableAll()
     uart10_tx_buffer[idx++] = ~check_sum;
     // 发送
     HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx);
-}
-
-void LekiwiChassis::ControlLoop()
-{
-    if (rc_data.IsRcOnline())
-    {
-        GetDataFromRc();
-        SolveWheelSpeed();
-    }
 }

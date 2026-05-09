@@ -102,11 +102,6 @@ bool LekiwiArm::Solve()
     return false;
 }
 
-void LekiwiArm::SolveEnd()
-{
-
-}
-
 void LekiwiArm::DeSolve() const
 {
     const float a = motors[1].GetSoftPos_Rad();
@@ -129,6 +124,47 @@ void LekiwiArm::Follow()
     motors[3].SetSoftTargetPos_One(controller[3].GetSoftPos_One());
     motors[4].SetSoftTargetPos_One(controller[4].GetSoftPos_One());
     motors[5].SetSoftTargetPos_One(controller[5].GetSoftPos_One());
+
+    const float multiplier =
+        utils::Clamp(
+            utils::Map(
+            fabsf(motors[5].GetSoftVel_Rad()),
+            0.0f,0.8f,1.0f,0.0f
+        ),
+        0.0f,1.0f
+    );
+    controller[5].SetSoftTargetLoad_One(
+        -motors[5].GetSoftLoad_One() *
+        multiplier
+    );
+}
+
+void LekiwiArm::ResetGripper()
+{
+    controller[5].SetSoftTargetLoad_One(0.0f);
+}
+
+void LekiwiArm::ControlLoop()
+{
+    if (rc_data.IsRcOnline())
+    {
+        if (rc_data.GetRcSwitchD() == eRemoteSwitchValue::HIGH)
+        {
+            GetDataFromRc();
+            if (!Solve())
+            {
+                target_x = target_x_last;
+                target_y = target_y_last;
+                target_theta = target_theta_last;
+            }
+            // DeSolve();
+            ResetGripper();
+        }
+        else
+        {
+            Follow();
+        }
+    }
 }
 
 void LekiwiArm::TransmitBusControlCmd()
@@ -186,27 +222,4 @@ void LekiwiArm::DisableAll()
     uart10_tx_buffer[idx++] = ~check_sum;
 
     HAL_UART_Transmit_DMA(&huart10, uart10_tx_buffer, idx);
-}
-
-void LekiwiArm::ControlLoop()
-{
-    if (rc_data.IsRcOnline())
-    {
-        if (rc_data.GetRcSwitchD() == eRemoteSwitchValue::HIGH)
-        {
-            GetDataFromRc();
-            if (!Solve())
-            {
-                target_x = target_x_last;
-                target_y = target_y_last;
-                target_theta = target_theta_last;
-            }
-            SolveEnd();
-            // DeSolve();
-        }
-        else
-        {
-            Follow();
-        }
-    }
 }
