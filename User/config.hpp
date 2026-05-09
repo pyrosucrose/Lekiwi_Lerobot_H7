@@ -19,6 +19,6 @@
 inline constexpr uint8_t TASK_BUZZER_TASK_PERIOD     = 10;
 inline constexpr uint8_t TASK_MOTOR_TASK_PERIOD      = 5;
 inline constexpr uint8_t TASK_ROBOT_TASK_PERIOD      = 5;
-inline constexpr uint8_t TASK_ROBOT_SEND_TASK_PERIOD = 10;
+inline constexpr uint8_t TASK_ROBOT_SEND_TASK_PERIOD = 5;
 inline constexpr uint8_t TASK_DEBUG_TASK_PERIOD      = 4;
 inline constexpr uint8_t TASK_LED_TASK_PERIOD        = 5;
