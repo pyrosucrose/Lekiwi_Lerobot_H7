@@ -13,9 +13,9 @@ public:
     LekiwiChassis():
         motors
         {
-        {8,0,0,0,true},
-        {9,0,0,0,true},
-        {7,0,0,0,true},
+        {8,0,0,0,true,MotorSts::Mode::VELOCITY},
+        {9,0,0,0,true,MotorSts::Mode::VELOCITY},
+        {7,0,0,0,true,MotorSts::Mode::VELOCITY},
         }
     {}
 

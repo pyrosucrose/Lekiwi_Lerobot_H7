@@ -13,22 +13,22 @@ public:
     LekiwiArm() :
         motors
         {
-        {1,2035,720,3440,false},
-        {2,1869,830,3200,true},
-        {3,2214,883,3080,true},
-        {4,1985,862,2900,true},
-        {5,2057,300,3980,true},
-        {6,1412,1400,2870,false},
+        {1,2035,720 ,3440,false,MotorSts::Mode::POSITIONAL},
+        {2,1869,830 ,3200,true ,MotorSts::Mode::POSITIONAL},
+        {3,2214,883 ,3080,true ,MotorSts::Mode::POSITIONAL},
+        {4,1985,862 ,2900,true ,MotorSts::Mode::POSITIONAL},
+        {5,2057,300 ,3980,true ,MotorSts::Mode::POSITIONAL},
+        {6,1412,1400,2870,false,MotorSts::Mode::POSITIONAL},
         },
 
         controller
         {
-        {11,2035,691,3423,false},
-        {12,1906,849,3254,true},
-        {13,2457,1131,3330,true},
-        {14,1671,480,2762,true},
-        {15,1503,132,3965,true},
-        {16,1702,1668,3015,false},
+        {11,2035,691 ,3423,false,MotorSts::Mode::POSITIONAL},
+        {12,1906,849 ,3254,true ,MotorSts::Mode::POSITIONAL},
+        {13,2457,1131,3330,true ,MotorSts::Mode::POSITIONAL},
+        {14,1671,480 ,2762,true ,MotorSts::Mode::POSITIONAL},
+        {15,1503,132 ,3965,true ,MotorSts::Mode::POSITIONAL},
+        {16,1702,1668,3015,false,MotorSts::Mode::POSITIONAL},
         }
     {}
     void DeSolve() const;

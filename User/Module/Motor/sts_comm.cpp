@@ -145,12 +145,13 @@ void MotorSts::ControlAll()
         uart10_tx_buffer[idx++] = val1;
         uart10_tx_buffer[idx++] = val1 >> 8;
 
-        uart10_tx_buffer[idx++] = 0;
-        uart10_tx_buffer[idx++] = 0;
-
-        const uint16_t val2 = ConvertStsData(motors_[i]->target_vel_ecd_);
+        const uint16_t val2 = motors_[i]->mode_ == Mode::PWM ? ConvertStsData(motors_[i]->target_load_ecd_, 10) : 0;
         uart10_tx_buffer[idx++] = val2;
         uart10_tx_buffer[idx++] = val2 >> 8;
+
+        const uint16_t val3 = ConvertStsData(motors_[i]->target_vel_ecd_);
+        uart10_tx_buffer[idx++] = val3;
+        uart10_tx_buffer[idx++] = val3 >> 8;
     }
     uart10_tx_buffer[3] = idx - 3;                        // FrameLen
 

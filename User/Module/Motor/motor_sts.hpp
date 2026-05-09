@@ -40,6 +40,14 @@ public:
         SET_2048    = 128,  // 设置当前位置为编码器2048点(二义性?!)
     } TorqueSwitch;
 
+    typedef enum : uint8_t
+    {
+        POSITIONAL  = 0,
+        VELOCITY    = 1,
+        PWM         = 2,
+        RAMP        = 3
+    } Mode;
+
     enum class REG : uint8_t
     {
         // EPROM
@@ -122,7 +130,7 @@ private:
     } Special;
 
 public:
-    MotorSts(uint8_t ID, uint16_t zero_point, uint16_t min_angle, uint16_t max_angle, bool reversed = false);
+    MotorSts(uint8_t ID, uint16_t zero_point, uint16_t min_angle, uint16_t max_angle, bool reversed, Mode mode);
     ~MotorSts();
 
     void UnpackData();
@@ -142,13 +150,15 @@ public:
     [[nodiscard]] static bool IsConnected() { return connected_; }
 
     void SetSoftTargetPos_Ecd(int16_t t);
-    void SetSoftTargetPos_Rad(const float t)    { SetSoftTargetPos_Ecd(Rad2Ecd(t)); }
-    void SetSoftTargetPos_One(const float t)    { SetSoftTargetPos_Ecd(One2Ecd(t)); }
+    void SetSoftTargetPos_Rad(const float t)    { SetSoftTargetPos_Ecd(Rad2Ecd_Pos(t)); }
+    void SetSoftTargetPos_One(const float t)    { SetSoftTargetPos_Ecd(One2Ecd_Pos(t)); }
+    void SetSoftTargetLoad_Ecd(const int16_t t) { soft_target_load_ecd_ = t; target_load_ecd_ = is_reversed_ ? -t : t; is_param_set_ = true; }
+    void SetSoftTargetLoad_One(const float t)   { SetSoftTargetLoad_Ecd(One2Ecd_Load(t)); }
     void SetSoftTargetVel_Ecd(const int16_t t)  { soft_target_vel_ecd_ = t; target_vel_ecd_ = is_reversed_ ? -t : t; is_param_set_ = true; }
-    void SetSoftTargetVel_Rad(const float t)    { SetSoftTargetVel_Ecd(Rad2Ecd(t)); }
+    void SetSoftTargetVel_Rad(const float t)    { SetSoftTargetVel_Ecd(Rad2Ecd_Pos(t)); }
 
     [[nodiscard]] bool IsSafePos_Ecd(const int16_t p) const { return utils::IsBetween(static_cast<int16_t>(is_reversed_ ? -p : p), soft_min_pos_ecd_, soft_max_pos_ecd_, static_cast<int16_t>(10)); }
-    [[nodiscard]] bool IsSafePos_Rad(const float p)   const { return IsSafePos_Ecd(Rad2Ecd(p)); }
+    [[nodiscard]] bool IsSafePos_Rad(const float p)   const { return IsSafePos_Ecd(Rad2Ecd_Pos(p)); }
 
     [[nodiscard]] bool IsReversed() const { return is_reversed_; }
     [[nodiscard]] bool IsOnline() const { return is_online_; }
@@ -156,50 +166,59 @@ public:
 
     [[nodiscard]] uint16_t GetHardTargetVel_Ecd() const { return target_vel_ecd_; }
     [[nodiscard]] uint16_t GetHardTargetPos_Ecd() const { return target_pos_ecd_; }
+    [[nodiscard]] uint16_t GetHardTargetLoad_Ecd()const { return target_load_ecd_; }
     [[nodiscard]] uint16_t GetHardPos_Raw()       const { return pos_ecd_; }
     [[nodiscard]] uint16_t GetHardVel_Raw()       const { return vel_ecd_; }
+    [[nodiscard]] uint16_t GetHardLoad_Raw()      const { return load_ecd_; }
 
     [[nodiscard]] int16_t  GetSoftTargetVel_Ecd() const { return soft_target_vel_ecd_; }
-    [[nodiscard]] float    GetSoftTargetVel_Rad() const { return Ecd2Rad(GetSoftTargetVel_Ecd()); }
+    [[nodiscard]] float    GetSoftTargetVel_Rad() const { return Ecd2Rad_Pos(GetSoftTargetVel_Ecd()); }
     [[nodiscard]] int16_t  GetSoftTargetPos_Ecd() const { return soft_target_pos_ecd_; }
-    [[nodiscard]] float    GetSoftTargetPos_Rad() const { return Ecd2Rad(GetSoftTargetPos_Ecd()); }
-    [[nodiscard]] float    GetSoftTargetPos_One() const { return Ecd2One(GetSoftTargetPos_Ecd()); }
+    [[nodiscard]] float    GetSoftTargetPos_Rad() const { return Ecd2Rad_Pos(GetSoftTargetPos_Ecd()); }
+    [[nodiscard]] float    GetSoftTargetPos_One() const { return Ecd2One_Pos(GetSoftTargetPos_Ecd()); }
+    [[nodiscard]] int16_t  GetSoftTargetLoad_Ecd()const { return soft_target_load_ecd_; }
+    [[nodiscard]] float    GetSoftTargetLoad_One()const { return Ecd2One_Load(GetSoftTargetLoad_Ecd()); }
     [[nodiscard]] int16_t  GetSoftVel_Ecd()       const { return soft_vel_ecd_; }
-    [[nodiscard]] float    GetSoftVel_Rad()       const { return Ecd2Rad(GetSoftVel_Ecd()); }
+    [[nodiscard]] float    GetSoftVel_Rad()       const { return Ecd2Rad_Pos(GetSoftVel_Ecd()); }
     [[nodiscard]] int16_t  GetSoftPos_Ecd()       const { return soft_pos_ecd_; }
-    [[nodiscard]] float    GetSoftPos_Rad()       const { return Ecd2Rad(GetSoftPos_Ecd()); }
-    [[nodiscard]] float    GetSoftPos_One()       const { return Ecd2One(GetSoftPos_Ecd()); }
+    [[nodiscard]] float    GetSoftPos_Rad()       const { return Ecd2Rad_Pos(GetSoftPos_Ecd()); }
+    [[nodiscard]] float    GetSoftPos_One()       const { return Ecd2One_Pos(GetSoftPos_Ecd()); }
+    [[nodiscard]] int16_t  GetSoftLoad_Ecd()      const { return load_ecd_; }
+    [[nodiscard]] float    GetSoftLoad_One()      const { return Ecd2One_Load(GetSoftTargetLoad_Ecd()); }
 
 
 private:
     static int16_t  PackStsData(uint8_t L, uint8_t H);
-    static uint16_t ConvertStsData(uint16_t s);
-    static bool     IsLowByteReg(REG reg);
+    static uint16_t ConvertStsData(int16_t d, uint8_t s = 15);
+    static bool     IsLowByteReg(REG r);
     void Reload(uint32_t tick_now);
     void ClampPos() { target_pos_ecd_ = utils::Clamp(target_pos_ecd_, min_pos_ecd_, max_pos_ecd_); }
-    [[nodiscard]] static int16_t  Rad2Ecd(const float v) { return static_cast<int16_t>(utils::Rad2Round(v) * ENCODER_RESOLUTION); }
-    [[nodiscard]] static float    Ecd2Rad(const int16_t v) { return utils::Round2Rad(v) / static_cast<float>(ENCODER_RESOLUTION); }
+    [[nodiscard]] static int16_t  Rad2Ecd_Pos(const float v) { return static_cast<int16_t>(utils::Rad2Round(v) * ENCODER_RESOLUTION); }
+    [[nodiscard]] static float    Ecd2Rad_Pos(const int16_t v) { return utils::Round2Rad(v) / static_cast<float>(ENCODER_RESOLUTION); }
+    [[nodiscard]] static int16_t  One2Ecd_Load(const float v) { return v * 1000; }
+    [[nodiscard]] static float    Ecd2One_Load(const int16_t v) { return v / 1000.0f; }
 
-    [[nodiscard]] float Ecd2One(const int16_t v) const { return utils::Map(v, soft_min_pos_ecd_, soft_max_pos_ecd_, 0.0f, 1.0f); }
-    [[nodiscard]] int16_t One2Ecd(const float v) const { return static_cast<int16_t>(utils::Map(v, 0.0f, 1.0f, soft_min_pos_ecd_, soft_max_pos_ecd_)); }
+    [[nodiscard]] float   Ecd2One_Pos(const int16_t v) const { return utils::Map(v, soft_min_pos_ecd_, soft_max_pos_ecd_, 0.0f, 1.0f); }
+    [[nodiscard]] int16_t One2Ecd_Pos(const float v) const { return static_cast<int16_t>(utils::Map(v, 0.0f, 1.0f, soft_min_pos_ecd_, soft_max_pos_ecd_)); }
 
     uint8_t ID_;
-    const bool is_reversed_;
+    const bool is_reversed_; const Mode mode_;
     const uint16_t zero_point_ecd_;
     uint16_t min_pos_ecd_;  int16_t soft_min_pos_ecd_;
     uint16_t max_pos_ecd_;  int16_t soft_max_pos_ecd_;
 
-    uint16_t pos_ecd_{0};  int16_t soft_pos_ecd_{0};
-    uint16_t vel_ecd_{0};  int16_t soft_vel_ecd_{0};
+    uint16_t pos_ecd_{2048};    int16_t soft_pos_ecd_{2048};
+    uint16_t vel_ecd_{0};       int16_t soft_vel_ecd_{0};
     int16_t load_ecd_{0};
     uint8_t volt_ecd_{0};
     uint8_t temp_ecd_{0};
     int16_t cur_ecd_{0};
 
-    uint16_t target_vel_ecd_{32767};   int16_t soft_target_vel_ecd_{32767};
-    uint16_t target_pos_ecd_{0};       int16_t soft_target_pos_ecd_{0};
+    uint16_t target_pos_ecd_{0};        int16_t soft_target_pos_ecd_{0};
+    uint16_t target_load_ecd_{0};       int16_t soft_target_load_ecd_{0};
+    uint16_t target_vel_ecd_{32767};    int16_t soft_target_vel_ecd_{32767};
+    uint16_t max_load_ecd{1000};
 
-    uint32_t last_ack_tick_{0};
     uint8_t cmd_l_{0xFF}, cmd_h_{0xFF};   // 设置读取寄存器时被置位，读取指令发送时被复位
     uint8_t ack_l_{0xFF}, ack_h_{0xFF};   // 读取指令发送时被上面的置位，解析完成后被复位
     uint8_t status_{0};
@@ -208,12 +227,13 @@ private:
     bool received_pack_{false};    // 有匹配该ID的回调时置位以执行Unpack指令(即使未成功写入也会置位防止卡死)，解包返回帧后复位
     bool in_use_{false};           // 发送读指令后置位以防止回调完成之前被再次执行读指令，解包返回帧后复位
     bool is_unpacking_{false};     // 开始解包时置位以阻止中断回调写入数据，解包完成后复位
+    uint32_t last_ack_tick_{0};
 
     uint8_t rx_buffer_[MAX_BUF_LEN]{};
 
-    static inline uint8_t motors_count_{0};                    // 电机数量，构造与析构时被修改
-    static inline MotorSts* motors_[MAX_MOTORS_COUNT]{};     // 静态电机列表，负责维护并批量处理所有电机
-    static inline uint8_t motors_idx_[MAX_MOTOR_ID + 1]{};   // 电机ID索引列表，记录每个ID的电机在motors_中的索引(没错，有相同ID的电机的话就是UB)
-    static inline uint32_t last_ack_all_{0};
-    static inline bool connected_{false};
+    static inline uint8_t motors_count_{0};                 // 电机数量，构造与析构时被修改
+    static inline MotorSts* motors_[MAX_MOTORS_COUNT]{};    // 静态电机列表，负责维护并批量处理所有电机
+    static inline uint8_t motors_idx_[MAX_MOTOR_ID + 1]{};  // 电机ID索引列表，记录每个ID的电机在motors_中的索引(没错，有相同ID的电机的话就是UB)
+    static inline uint32_t last_ack_all_{0};                // 电机上一次应答包时间戳，在任意电机传数据时更新
+    static inline volatile bool connected_{false};          // 电机在线标志，当所有电机都超时时置为false(检查一下电开没开?)
 };

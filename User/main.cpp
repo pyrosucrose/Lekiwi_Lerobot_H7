@@ -25,12 +25,12 @@ void User_Init()
     BSP_Init();
     Buzzer::SetTone(0);
     auto s = Delay::GetTimeStamp();
-    MotorSts motor1(11,2035,720,3440,false);
-    MotorSts motor2(12,1906,830,3200,false);
-    MotorSts motor3(13,2457,883,3080,false);
-    MotorSts motor4(14,1671,862,2900,false);
-    MotorSts motor5(15,1503,300,3980,false);
-    MotorSts motor6(16,1702,1400,2870,false);
+    MotorSts motor1(11,2035,720 ,3440,false,MotorSts::Mode::VELOCITY);
+    MotorSts motor2(12,1906,830 ,3200,false,MotorSts::Mode::VELOCITY);
+    MotorSts motor3(13,2457,883 ,3080,false,MotorSts::Mode::VELOCITY);
+    MotorSts motor4(14,1671,862 ,2900,false,MotorSts::Mode::VELOCITY);
+    MotorSts motor5(15,1503,300 ,3980,false,MotorSts::Mode::VELOCITY);
+    MotorSts motor6(16,1702,1400,2870,false,MotorSts::Mode::VELOCITY);
     while (true)
     {
         HAL_Delay(10);

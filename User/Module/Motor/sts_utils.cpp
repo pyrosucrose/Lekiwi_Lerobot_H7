@@ -23,33 +23,34 @@ int16_t MotorSts::PackStsData(const uint8_t L, const uint8_t H)
 
 /**
  * @brief   处理STS特有的(呕)数据格式
- * @param   s: 传入的数据
- * @retval  转化为STS格式后的数据(bit15表示正负号，s & 0x7FFF是绝对值)
+ * @param   d: 传入的数据
+ * @param   s: 该数据的符号位，默认为最高位15
+ * @retval  转化为STS格式后的数据(bit s 表示正负号，低位是绝对值)
  * @note    通常只会对负数有影响
  * @note    虽然声明传入的是uint16，但传int16也是一样的
  * @note    想出这样处理(u)int16的家里清明节指定能多出些什么来
  */
-uint16_t MotorSts::ConvertStsData(const uint16_t s)
+uint16_t MotorSts::ConvertStsData(const int16_t d, const uint8_t s)
 {
-    return s & 0x8000 ? static_cast<uint16_t>(-(s & 0x7FFF)) : s;
+    return d < 0 ? (abs(d) & ((1 << s) - 1)) | (1 << s) : d & ((1 << s) - 1);
 }
 
 /**
  * @brief   表示传入的寄存器地址是否是某个16bit数据的低位寄存器
- * @param   reg:寄存器地址
+ * @param   r:寄存器地址
  * @retval  是不是
  */
-bool MotorSts::IsLowByteReg(const REG reg)
+bool MotorSts::IsLowByteReg(const REG r)
 {
-    return reg == REG::TARGET_POSITION_L ||
-           reg == REG::TARGET_SPEED_L ||
-           reg == REG::MIN_ANGLE_LIMIT_L ||
-           reg == REG::MAX_ANGLE_LIMIT_L ||
-           reg == REG::MAX_TORQUE_L ||
-           reg == REG::PROTECTION_CURRENT_L ||
-           reg == REG::POSITION_CORRECTION_L ||
-           reg == REG::MOVING_TIME_L ||
-           reg == REG::TORQUE_LIMIT_L;
+    return r == REG::TARGET_POSITION_L ||
+           r == REG::TARGET_SPEED_L ||
+           r == REG::MIN_ANGLE_LIMIT_L ||
+           r == REG::MAX_ANGLE_LIMIT_L ||
+           r == REG::MAX_TORQUE_L ||
+           r == REG::PROTECTION_CURRENT_L ||
+           r == REG::POSITION_CORRECTION_L ||
+           r == REG::MOVING_TIME_L ||
+           r == REG::TORQUE_LIMIT_L;
 }
 
 /**
@@ -63,8 +64,8 @@ bool MotorSts::IsLowByteReg(const REG reg)
  * @note    若从这进了Crash那可能是电机ID冲突或是注册的电机过多导致超出MAX_MOTORS_COUNT，需要修正或修改相关配置
  * @warning 对于重复ID的处理能力有限，用户必须保证没用重复ID的电机被写入！
  */
-MotorSts::MotorSts(const uint8_t ID, const uint16_t zero_point, const uint16_t min_angle, const uint16_t max_angle, const bool reversed) :
-    ID_(ID), is_reversed_(reversed), zero_point_ecd_(zero_point),
+MotorSts::MotorSts(const uint8_t ID, const uint16_t zero_point, const uint16_t min_angle, const uint16_t max_angle, const bool reversed, const Mode mode) :
+    ID_(ID), is_reversed_(reversed), mode_(mode), zero_point_ecd_(zero_point),
     min_pos_ecd_(min_angle), soft_min_pos_ecd_(static_cast<int16_t>(reversed ? zero_point - max_angle : min_angle - zero_point)),
     max_pos_ecd_(max_angle), soft_max_pos_ecd_(static_cast<int16_t>(reversed ? zero_point - min_angle : max_angle - zero_point))
 {
